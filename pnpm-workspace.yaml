@@ -1,5 +1,5 @@
 allowBuilds:
-  '@prisma/engines': false
-  prisma: false
+  '@prisma/engines': true
+  prisma: true
   sharp: false
   unrs-resolver: false

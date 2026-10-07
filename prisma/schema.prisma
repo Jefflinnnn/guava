@@ -1,0 +1,54 @@
+// Prisma schema. Docs: https://pris.ly/d/prisma-schema
+// Connection URLs live in prisma.config.ts (CLI) and lib/prisma.ts (app).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Placeholder user. Swap for your auth provider's user model when you add auth.
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  plaidItems PlaidItem[]
+}
+
+// One row per bank connection ("Item" in Plaid terms).
+model PlaidItem {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plaidItemId        String    @unique
+  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never send to the browser.
+  accessToken        String
+  institutionId      String?
+  institutionName    String?
+  // Cursor for /transactions/sync, so each sync only pulls what changed.
+  transactionsCursor String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  accounts           Account[]
+
+  @@index([userId])
+}
+
+model Account {
+  id             String    @id @default(cuid())
+  plaidItemId    String
+  item           PlaidItem @relation(fields: [plaidItemId], references: [id], onDelete: Cascade)
+  plaidAccountId String    @unique
+  name           String
+  mask           String?
+  type           String
+  subtype        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([plaidItemId])
+}
