@@ -44,7 +44,7 @@ export function PlaidLinkButton() {
         router.refresh();
       });
     },
-    [router]
+    [router],
   );
 
   // Step 2: the user picks their bank in Plaid's modal.

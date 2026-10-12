@@ -32,7 +32,8 @@ export function decrypt(payload: string): string {
     .map((part) => Buffer.from(part, "base64"));
   const decipher = createDecipheriv("aes-256-gcm", key(), iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
-    "utf8"
-  );
+  return Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),
+  ]).toString("utf8");
 }

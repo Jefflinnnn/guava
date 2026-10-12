@@ -14,7 +14,7 @@ export async function GET() {
     console.error("health check failed", error);
     return Response.json(
       { ok: false, database: "unreachable" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }

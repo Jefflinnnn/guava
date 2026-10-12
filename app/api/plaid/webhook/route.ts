@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!event) return Response.json({ error: "Invalid body" }, { status: 400 });
 
   console.log(
-    `Plaid webhook: ${event.webhook_type}/${event.webhook_code} for ${event.item_id}`
+    `Plaid webhook: ${event.webhook_type}/${event.webhook_code} for ${event.item_id}`,
   );
 
   switch (`${event.webhook_type}/${event.webhook_code}`) {
