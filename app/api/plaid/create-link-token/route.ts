@@ -23,7 +23,7 @@ export async function POST() {
     console.error("create-link-token failed", error);
     return Response.json(
       { error: "Could not create link token" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

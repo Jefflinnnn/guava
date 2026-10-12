@@ -34,7 +34,7 @@ export function getPlaidClient(): PlaidApi {
           "PLAID-SECRET": required("PLAID_SECRET"),
         },
       },
-    })
+    }),
   );
   return client;
 }

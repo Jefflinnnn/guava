@@ -21,12 +21,12 @@ pnpm install
 cp .env.example .env
 ```
 
-| Variable | Where to get it |
-| --- | --- |
-| `DATABASE_URL` | Neon console → Connect → **Pooled** connection string |
-| `DIRECT_URL` | Same screen, pooling turned **off** |
-| `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret) |
-| `ENCRYPTION_KEY` | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| Variable                          | Where to get it                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| `DATABASE_URL`                    | Neon console → Connect → **Pooled** connection string                         |
+| `DIRECT_URL`                      | Same screen, pooling turned **off**                                           |
+| `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
+| `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 
 **3. Create the tables** in Neon:
 
@@ -68,14 +68,14 @@ generated/prisma/             Generated Prisma client (gitignored)
 
 ## Scripts
 
-| Command | Does |
-| --- | --- |
-| `pnpm dev` | Dev server |
-| `pnpm build` / `pnpm start` | Production build / serve |
-| `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript |
-| `pnpm db:migrate` | Create and apply a migration after editing the schema (dev) |
-| `pnpm db:deploy` | Apply existing migrations (production / CI) |
-| `pnpm db:studio` | Browse your Neon data in Prisma Studio |
+| Command                        | Does                                                        |
+| ------------------------------ | ----------------------------------------------------------- |
+| `pnpm dev`                     | Dev server                                                  |
+| `pnpm build` / `pnpm start`    | Production build / serve                                    |
+| `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript                                         |
+| `pnpm db:migrate`              | Create and apply a migration after editing the schema (dev) |
+| `pnpm db:deploy`               | Apply existing migrations (production / CI)                 |
+| `pnpm db:studio`               | Browse your Neon data in Prisma Studio                      |
 
 ## Before going to production
 

@@ -60,7 +60,11 @@ export async function POST(request: Request) {
       await prisma.account.upsert({
         where: { plaidAccountId: acct.account_id },
         update: fields,
-        create: { ...fields, plaidAccountId: acct.account_id, plaidItemId: item.id },
+        create: {
+          ...fields,
+          plaidAccountId: acct.account_id,
+          plaidItemId: item.id,
+        },
       });
     }
 
@@ -72,9 +76,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("exchange-public-token failed", error);
-    return Response.json(
-      { error: "Could not link account" },
-      { status: 500 }
-    );
+    return Response.json({ error: "Could not link account" }, { status: 500 });
   }
 }
