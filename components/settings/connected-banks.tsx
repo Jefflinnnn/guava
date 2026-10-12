@@ -5,10 +5,10 @@ import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { getCurrentUserId } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
-export default function Home() {
+/** Plaid-linked banks for the current user, with the "Connect a bank" flow. */
+export function ConnectedBanksCard() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16">
-      <section className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm">
+      <section className="bg-card text-card-foreground rounded-xl border p-6 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-heading text-lg font-semibold">
@@ -28,7 +28,6 @@ export default function Home() {
           </Suspense>
         </div>
       </section>
-    </main>
   );
 }
 
