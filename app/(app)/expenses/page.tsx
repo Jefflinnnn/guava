@@ -1,9 +1,5 @@
-import { Page, PageHeader } from "@/components/shell/page";
+import { ExpensesScreen } from "@/components/expenses/expenses-screen";
 
 export default function ExpensesPage() {
-  return (
-    <Page>
-      <PageHeader title="Expenses" />
-    </Page>
-  );
+  return <ExpensesScreen />;
 }
