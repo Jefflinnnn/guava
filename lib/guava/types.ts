@@ -1,0 +1,58 @@
+/** A calendar date as `YYYY-MM-DD` (local, no time zone). */
+export type DateKey = string;
+
+/** A calendar month. `month` is 0-based (0 = January). */
+export type Month = { year: number; month: number };
+
+export type Txn = {
+  id: number;
+  date: DateKey;
+  name: string;
+  amountCents: number;
+  catId: string;
+  subId: string | null;
+  needsReview: boolean;
+  note: string;
+};
+
+export type Sub = { id: string; name: string; budgetCents: number };
+
+export type Cat = {
+  id: string;
+  name: string;
+  /** Any CSS color (presets are oklch, custom picks are hex). */
+  color: string;
+  budgetCents: number;
+  locked: boolean;
+  subs: Sub[];
+};
+
+export type WidgetId = "cat" | "year" | "line" | "cal" | "share";
+export type WidgetSize = "half" | "full";
+export type Widget = { id: WidgetId; size: WidgetSize };
+
+export type DateFilter = "7d" | "30d" | "month" | "90d" | "all";
+export type StatusFilter = "all" | "review" | "reviewed";
+
+export type Filters = {
+  date: DateFilter;
+  q: string;
+  /** Dollar strings as typed in the filter boxes ("" = unset). */
+  min: string;
+  max: string;
+  cats: string[];
+  /** `${catId}/${subId}` keys. */
+  subs: string[];
+  status: StatusFilter;
+};
+
+export type SortKey = "date" | "name" | "amount";
+export type Sort = { key: SortKey; dir: 1 | -1 };
+
+export type Settings = {
+  autoBills: boolean;
+  weekly: boolean;
+  big: boolean;
+};
+
+export type DayTotal = { sum: number; n: number };
