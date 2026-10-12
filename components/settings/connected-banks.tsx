@@ -2,32 +2,29 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 
 import { PlaidLinkButton } from "@/components/plaid-link-button";
+import { Card } from "@/components/shell/page";
 import { getCurrentUserId } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
 /** Plaid-linked banks for the current user, with the "Connect a bank" flow. */
 export function ConnectedBanksCard() {
   return (
-    <section className="bg-card text-card-foreground rounded-xl border p-6 shadow-card">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-lg font-semibold">
-            Connected banks
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Linked through Plaid, stored in Neon with Prisma.
-          </p>
+    <Card className="px-5 py-4">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold">Connected banks</h2>
+            <p className="mt-0.5 text-[13px] text-ink-3">
+              Linked through Plaid, stored in Neon with Prisma.
+            </p>
+          </div>
+          <PlaidLinkButton />
         </div>
-        <PlaidLinkButton />
-      </div>
-      <div className="mt-6">
-        <Suspense
-          fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
-        >
+        <Suspense fallback={<p className="text-[13px] text-ink-3">Loading…</p>}>
           <ConnectedBanks />
         </Suspense>
-      </div>
-    </section>
+      </section>
+    </Card>
   );
 }
 
@@ -48,7 +45,7 @@ async function ConnectedBanks() {
 
   if (items.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-[13px] text-ink-3">
         No banks connected yet. In sandbox, sign in with{" "}
         <code className="font-mono">user_good</code> /{" "}
         <code className="font-mono">pass_good</code>.
@@ -57,13 +54,15 @@ async function ConnectedBanks() {
   }
 
   return (
-    <ul className="divide-y">
+    <ul className="divide-y divide-muted border-t border-muted">
       {items.map((item) => (
-        <li key={item.id} className="py-3">
-          <p className="font-medium">{item.institutionName ?? "Bank"}</p>
-          <ul className="text-muted-foreground mt-1 text-sm">
+        <li key={item.id} className="py-3 last:pb-0">
+          <p className="truncate font-medium">
+            {item.institutionName ?? "Bank"}
+          </p>
+          <ul className="mt-0.5 text-[13px] text-ink-3">
             {item.accounts.map((a) => (
-              <li key={a.id}>
+              <li key={a.id} className="truncate">
                 {a.name}
                 {a.mask ? ` ••${a.mask}` : ""}
                 {a.subtype ? ` · ${a.subtype}` : ""}
