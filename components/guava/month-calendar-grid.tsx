@@ -1,6 +1,12 @@
 "use client";
 
-import { daysInMonth, firstWeekday, keyOf, TODAY, WEEKDAYS_SHORT } from "@/lib/guava/dates";
+import {
+  daysInMonth,
+  firstWeekday,
+  keyOf,
+  TODAY,
+  WEEKDAYS_SHORT,
+} from "@/lib/guava/dates";
 import { calendarAmount } from "@/lib/guava/format";
 import { HEAT_CLASSES, heatLevel } from "@/lib/guava/heat";
 import { useDailyTotals } from "@/lib/guava/store";
@@ -50,10 +56,15 @@ export function MonthCalendarGrid({
   const { daily, thresholds } = useDailyTotals();
   const v = VARIANTS[variant];
   const lead = firstWeekday(month);
-  const days = Array.from({ length: daysInMonth(month) }, (_, i) => keyOf(month.year, month.month, i + 1));
+  const days = Array.from({ length: daysInMonth(month) }, (_, i) =>
+    keyOf(month.year, month.month, i + 1),
+  );
 
   return (
-    <div className={cn("grid grid-cols-7 gap-1", className)} onMouseLeave={() => onHoverChange?.(null)}>
+    <div
+      className={cn("grid grid-cols-7 gap-1", className)}
+      onMouseLeave={() => onHoverChange?.(null)}
+    >
       {WEEKDAYS_SHORT.map((d) => (
         <div key={d} className="pb-1 text-center text-[11px] text-ink-3">
           {d}
@@ -78,11 +89,25 @@ export function MonthCalendarGrid({
               v.cell,
               future ? v.future : HEAT_CLASSES[heatLevel(sum, thresholds)],
               Tag === "button" && "cursor-pointer",
-              hoveredKey === key ? "outline-2 outline-primary" : v.markToday && isToday && "outline-1 outline-primary"
+              hoveredKey === key
+                ? "outline-2 outline-primary"
+                : v.markToday && isToday && "outline-1 outline-primary",
             )}
           >
-            <span className={cn("text-[11px] leading-none", v.markToday && isToday ? "font-bold" : "font-medium")}>{i + 1}</span>
-            <span className={cn("overflow-hidden text-right font-mono leading-none whitespace-nowrap", v.amount)}>
+            <span
+              className={cn(
+                "text-[11px] leading-none",
+                v.markToday && isToday ? "font-bold" : "font-medium",
+              )}
+            >
+              {i + 1}
+            </span>
+            <span
+              className={cn(
+                "overflow-hidden text-right font-mono leading-none whitespace-nowrap",
+                v.amount,
+              )}
+            >
               {future ? "" : sum ? calendarAmount(sum) : v.zero}
             </span>
           </Tag>

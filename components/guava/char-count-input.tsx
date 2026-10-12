@@ -27,7 +27,13 @@ export function CharCountInput({
 }) {
   const id = useId();
   return (
-    <Field label={label} htmlFor={id} aside={showCount ? `${value.length}/${max}` : undefined} error={error} hint={hint}>
+    <Field
+      label={label}
+      htmlFor={id}
+      aside={showCount ? `${value.length}/${max}` : undefined}
+      error={error}
+      hint={hint}
+    >
       <Input
         id={id}
         value={value}

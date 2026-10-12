@@ -8,7 +8,8 @@ export type ThemePreference = "light" | "dark" | "system";
 
 const THEME_KEY = "guava.theme";
 const DEFAULT_THEME: ThemePreference = "system";
-const isTheme = (v: unknown): v is ThemePreference => v === "light" || v === "dark" || v === "system";
+const isTheme = (v: unknown): v is ThemePreference =>
+  v === "light" || v === "dark" || v === "system";
 
 /**
  * Runs before first paint (inlined in <head>) so the right theme class is on
@@ -17,7 +18,9 @@ const isTheme = (v: unknown): v is ThemePreference => v === "light" || v === "da
 export const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem(${JSON.stringify(THEME_KEY)})||'"system"');var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
 
 function applyTheme(pref: ThemePreference) {
-  const dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark =
+    pref === "dark" ||
+    (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", dark);
 }
 

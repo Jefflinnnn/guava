@@ -23,8 +23,17 @@ export function ProgressBar({
   const over = max > 0 ? value > max : noBudget === "over" && value > 0;
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : over ? 100 : 0;
   return (
-    <div className={cn("w-full overflow-hidden rounded-full bg-muted", height === 4 ? "h-1" : "h-1.5", className)}>
-      <div className="h-full rounded-full transition-[width]" style={{ width: `${pct}%`, background: over ? "var(--danger)" : color }} />
+    <div
+      className={cn(
+        "w-full overflow-hidden rounded-full bg-muted",
+        height === 4 ? "h-1" : "h-1.5",
+        className,
+      )}
+    >
+      <div
+        className="h-full rounded-full transition-[width]"
+        style={{ width: `${pct}%`, background: over ? "var(--danger)" : color }}
+      />
     </div>
   );
 }

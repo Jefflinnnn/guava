@@ -9,7 +9,16 @@ import {
   TODAY,
 } from "./dates";
 import { filterAmountToCents } from "./money-input";
-import type { Cat, DateKey, DayTotal, Filters, Month, Sort, Sub, Txn } from "./types";
+import type {
+  Cat,
+  DateKey,
+  DayTotal,
+  Filters,
+  Month,
+  Sort,
+  Sub,
+  Txn,
+} from "./types";
 
 // Pure derivations over the store. Hooks in store.tsx memoize these.
 
@@ -52,7 +61,11 @@ export type CategoryStat = {
 };
 
 /** Per-category spend for one month, sorted by spend (highest first). */
-export function categoryStats(txns: Txn[], cats: Cat[], m: Month): CategoryStat[] {
+export function categoryStats(
+  txns: Txn[],
+  cats: Cat[],
+  m: Month,
+): CategoryStat[] {
   const month = txnsInMonth(txns, m);
   const total = sumCents(month);
   const spent = new Map<string, { spent: number; count: number }>();
@@ -72,14 +85,21 @@ export function categoryStats(txns: Txn[], cats: Cat[], m: Month): CategoryStat[
         cat,
         ...c,
         share: total ? c.spent / total : 0,
-        subs: cat.subs.map((sub) => ({ sub, ...(spent.get(`${cat.id}/${sub.id}`) ?? { spent: 0, count: 0 }) })),
+        subs: cat.subs.map((sub) => ({
+          sub,
+          ...(spent.get(`${cat.id}/${sub.id}`) ?? { spent: 0, count: 0 }),
+        })),
         allocated: cat.subs.reduce((a, s) => a + s.budgetCents, 0),
       };
     })
     .sort((a, b) => b.spent - a.spent);
 }
 
-export type MonthTotal = { month: Month; total: number; /** the current, unfinished month */ partial: boolean };
+export type MonthTotal = {
+  month: Month;
+  total: number;
+  /** the current, unfinished month */ partial: boolean;
+};
 
 /** One entry per month from MIN_MONTH to MAX_MONTH. */
 export function monthlyTotals(txns: Txn[]): MonthTotal[] {
@@ -91,15 +111,35 @@ export function monthlyTotals(txns: Txn[]): MonthTotal[] {
   const current = monthIndex(monthOf(TODAY));
   const out: MonthTotal[] = [];
   for (let k = monthIndex(MIN_MONTH); k <= monthIndex(MAX_MONTH); k++) {
-    out.push({ month: fromMonthIndex(k), total: byMonth.get(k) ?? 0, partial: k === current });
+    out.push({
+      month: fromMonthIndex(k),
+      total: byMonth.get(k) ?? 0,
+      partial: k === current,
+    });
   }
   return out;
 }
 
 // ---- Expenses filtering
 
-export const DEFAULT_FILTERS: Filters = { date: "30d", q: "", min: "", max: "", cats: [], subs: [], status: "all" };
-export const CLEARED_FILTERS: Filters = { date: "all", q: "", min: "", max: "", cats: [], subs: [], status: "all" };
+export const DEFAULT_FILTERS: Filters = {
+  date: "30d",
+  q: "",
+  min: "",
+  max: "",
+  cats: [],
+  subs: [],
+  status: "all",
+};
+export const CLEARED_FILTERS: Filters = {
+  date: "all",
+  q: "",
+  min: "",
+  max: "",
+  cats: [],
+  subs: [],
+  status: "all",
+};
 export const DEFAULT_SORT: Sort = { key: "date", dir: -1 };
 
 export const DATE_FILTER_OPTIONS: [Filters["date"], string][] = [
@@ -135,7 +175,7 @@ export function filterTxns(txns: Txn[], f: Filters, sort: Sort): Txn[] {
       (isNaN(min) || t.amountCents >= min) &&
       (isNaN(max) || t.amountCents <= max) &&
       (!f.cats.length || f.cats.includes(t.catId)) &&
-      (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`))
+      (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`)),
   );
   return list.sort((a, b) => {
     const v =

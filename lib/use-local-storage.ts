@@ -18,7 +18,11 @@ function readRaw(key: string): string | null {
   }
 }
 
-function read<T>(key: string, fallback: T, validate?: (v: unknown) => v is T): T {
+function read<T>(
+  key: string,
+  fallback: T,
+  validate?: (v: unknown) => v is T,
+): T {
   const raw = readRaw(key);
   const hit = cache.get(key);
   if (hit && hit.raw === raw) return hit.value as T;
@@ -60,19 +64,22 @@ function subscribe(cb: () => void) {
 export function useLocalStorage<T>(
   key: string,
   fallback: T,
-  validate?: (v: unknown) => v is T
+  validate?: (v: unknown) => v is T,
 ): [T, (next: T | ((prev: T) => T)) => void] {
   const value = useSyncExternalStore(
     subscribe,
     () => read(key, fallback, validate),
-    () => fallback
+    () => fallback,
   );
   const set = useCallback(
     (next: T | ((prev: T) => T)) => {
       const prev = read(key, fallback, validate);
-      write(key, typeof next === "function" ? (next as (p: T) => T)(prev) : next);
+      write(
+        key,
+        typeof next === "function" ? (next as (p: T) => T)(prev) : next,
+      );
     },
-    [key, fallback, validate]
+    [key, fallback, validate],
   );
   return [value, set];
 }

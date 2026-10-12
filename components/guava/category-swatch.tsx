@@ -16,11 +16,23 @@ export function CategorySwatch({
   size?: keyof typeof SWATCH_SIZES;
   className?: string;
 }) {
-  return <span aria-hidden className={cn("inline-block flex-none", SWATCH_SIZES[size], className)} style={{ background: color }} />;
+  return (
+    <span
+      aria-hidden
+      className={cn("inline-block flex-none", SWATCH_SIZES[size], className)}
+      style={{ background: color }}
+    />
+  );
 }
 
 /** A tinted square tile holding a swatch (Categories list, dialogs). */
-export function CategoryTile({ color, className }: { color: string; className?: string }) {
+export function CategoryTile({
+  color,
+  className,
+}: {
+  color: string;
+  className?: string;
+}) {
   return (
     <span
       aria-hidden
@@ -28,7 +40,7 @@ export function CategoryTile({ color, className }: { color: string; className?: 
       className={cn(
         "flex size-9 flex-none items-center justify-center rounded-lg",
         "bg-[color-mix(in_oklch,var(--cat)_14%,white)] dark:bg-[color-mix(in_oklch,var(--cat)_22%,var(--card))]",
-        className
+        className,
       )}
     >
       <CategorySwatch color={color} size={12} />

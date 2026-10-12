@@ -1,6 +1,10 @@
 import { cn } from "@/lib/utils";
 
-export type SegmentedOption<T extends string> = { value: T; label: React.ReactNode; disabled?: boolean };
+export type SegmentedOption<T extends string> = {
+  value: T;
+  label: React.ReactNode;
+  disabled?: boolean;
+};
 
 /** A small segmented control; the active segment is a raised chip. */
 export function Segmented<T extends string>({
@@ -19,7 +23,11 @@ export function Segmented<T extends string>({
   "aria-label"?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn("inline-flex rounded-md bg-muted p-0.5", className)}>
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className={cn("inline-flex rounded-md bg-muted p-0.5", className)}
+    >
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -33,7 +41,9 @@ export function Segmented<T extends string>({
             className={cn(
               "cursor-pointer rounded-[5px] px-2.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
               size === "sm" ? "h-[22px] text-xs" : "h-7 text-[13px]",
-              on ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.12)]" : "text-ink-3 hover:text-foreground"
+              on
+                ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.12)]"
+                : "text-ink-3 hover:text-foreground",
             )}
           >
             {o.label}

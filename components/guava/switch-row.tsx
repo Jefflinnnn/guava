@@ -28,13 +28,28 @@ export function SwitchRow({
 }) {
   const id = useId();
   return (
-    <div className={cn("flex items-center gap-3", bordered && "rounded-lg border px-3.5 py-3", className)}>
-      {icon && <span className="flex-none text-ink-3 [&_svg]:size-4">{icon}</span>}
+    <div
+      className={cn(
+        "flex items-center gap-3",
+        bordered && "rounded-lg border px-3.5 py-3",
+        className,
+      )}
+    >
+      {icon && (
+        <span className="flex-none text-ink-3 [&_svg]:size-4">{icon}</span>
+      )}
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
         <div className="font-medium">{title}</div>
-        {description && <div className="mt-0.5 text-[13px] text-ink-3">{description}</div>}
+        {description && (
+          <div className="mt-0.5 text-[13px] text-ink-3">{description}</div>
+        )}
       </label>
-      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+      />
     </div>
   );
 }

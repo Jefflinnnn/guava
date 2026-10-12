@@ -1,14 +1,36 @@
 "use client";
 
-import { createContext, useContext, useMemo, useReducer, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useReducer,
+  type ReactNode,
+} from "react";
 
 import { useLocalStorage } from "@/lib/use-local-storage";
 
 import { clampMonth, DEFAULT_MONTH } from "./dates";
 import { heatThresholds, type HeatThresholds } from "./heat";
 import { generateSampleTxns, SAMPLE_CATEGORIES } from "./sample-data";
-import { categoryStats, dailyTotals, monthlyTotals, reviewCount, type CategoryStat } from "./selectors";
-import type { Cat, DateKey, DayTotal, Month, Settings, Sub, Txn, Widget, WidgetId } from "./types";
+import {
+  categoryStats,
+  dailyTotals,
+  monthlyTotals,
+  reviewCount,
+  type CategoryStat,
+} from "./selectors";
+import type {
+  Cat,
+  DateKey,
+  DayTotal,
+  Month,
+  Settings,
+  Sub,
+  Txn,
+  Widget,
+  WidgetId,
+} from "./types";
 
 type State = {
   txns: Txn[];
@@ -42,7 +64,11 @@ function reducer(s: State, a: Action): State {
       return { ...s, month: clampMonth(a.month) };
     case "upsertTxn": {
       const { id, ...rec } = a.txn;
-      if (id != null) return { ...s, txns: s.txns.map((t) => (t.id === id ? { ...t, ...rec } : t)) };
+      if (id != null)
+        return {
+          ...s,
+          txns: s.txns.map((t) => (t.id === id ? { ...t, ...rec } : t)),
+        };
       const nextId = s.txns.reduce((m, t) => Math.max(m, t.id), 0) + 1;
       return { ...s, txns: [{ id: nextId, ...rec }, ...s.txns] };
     }
@@ -50,11 +76,20 @@ function reducer(s: State, a: Action): State {
       return { ...s, txns: s.txns.filter((t) => t.id !== a.id) };
     case "setReview": {
       const ids = new Set(a.ids);
-      return { ...s, txns: s.txns.map((t) => (ids.has(t.id) ? { ...t, needsReview: a.needsReview } : t)) };
+      return {
+        ...s,
+        txns: s.txns.map((t) =>
+          ids.has(t.id) ? { ...t, needsReview: a.needsReview } : t,
+        ),
+      };
     }
     case "upsertCat": {
       const { id, ...rec } = a.cat;
-      if (id != null) return { ...s, cats: s.cats.map((c) => (c.id === id ? { ...c, ...rec } : c)) };
+      if (id != null)
+        return {
+          ...s,
+          cats: s.cats.map((c) => (c.id === id ? { ...c, ...rec } : c)),
+        };
       return { ...s, cats: [...s.cats, { id: a.newId, ...rec, subs: [] }] };
     }
     case "deleteCat":
@@ -62,7 +97,9 @@ function reducer(s: State, a: Action): State {
         ...s,
         cats: s.cats.filter((c) => c.id !== a.id),
         txns: a.moveTo
-          ? s.txns.map((t) => (t.catId === a.id ? { ...t, catId: a.moveTo!, subId: null } : t))
+          ? s.txns.map((t) =>
+              t.catId === a.id ? { ...t, catId: a.moveTo!, subId: null } : t,
+            )
           : s.txns,
       };
     case "upsertSub":
@@ -73,15 +110,26 @@ function reducer(s: State, a: Action): State {
           const { id, ...rec } = a.sub;
           return {
             ...c,
-            subs: id != null ? c.subs.map((x) => (x.id === id ? { ...x, ...rec } : x)) : [...c.subs, { id: a.newId, ...rec }],
+            subs:
+              id != null
+                ? c.subs.map((x) => (x.id === id ? { ...x, ...rec } : x))
+                : [...c.subs, { id: a.newId, ...rec }],
           };
         }),
       };
     case "deleteSub":
       return {
         ...s,
-        cats: s.cats.map((c) => (c.id === a.catId ? { ...c, subs: c.subs.filter((x) => x.id !== a.subId) } : c)),
-        txns: s.txns.map((t) => (t.catId === a.catId && t.subId === a.subId ? { ...t, subId: null } : t)),
+        cats: s.cats.map((c) =>
+          c.id === a.catId
+            ? { ...c, subs: c.subs.filter((x) => x.id !== a.subId) }
+            : c,
+        ),
+        txns: s.txns.map((t) =>
+          t.catId === a.catId && t.subId === a.subId
+            ? { ...t, subId: null }
+            : t,
+        ),
       };
     case "toggleSetting":
       return { ...s, settings: { ...s.settings, [a.key]: !s.settings[a.key] } };
@@ -104,14 +152,20 @@ function makeActions(dispatch: React.Dispatch<Action>) {
     upsertTxn: (txn: TxnDraft) => dispatch({ type: "upsertTxn", txn }),
     deleteTxn: (id: number) => dispatch({ type: "deleteTxn", id }),
     /** `needsReview: false` marks reviewed; `true` moves back to the review queue. */
-    setReview: (ids: number[], needsReview: boolean) => dispatch({ type: "setReview", ids, needsReview }),
-    upsertCat: (cat: CatDraft) => dispatch({ type: "upsertCat", cat, newId: newId("c") }),
+    setReview: (ids: number[], needsReview: boolean) =>
+      dispatch({ type: "setReview", ids, needsReview }),
+    upsertCat: (cat: CatDraft) =>
+      dispatch({ type: "upsertCat", cat, newId: newId("c") }),
     /** Deletes a category; its transactions move to `moveTo` and lose their subcategory. */
-    deleteCat: (id: string, moveTo: string | null) => dispatch({ type: "deleteCat", id, moveTo }),
-    upsertSub: (catId: string, sub: SubDraft) => dispatch({ type: "upsertSub", catId, sub, newId: newId("s") }),
+    deleteCat: (id: string, moveTo: string | null) =>
+      dispatch({ type: "deleteCat", id, moveTo }),
+    upsertSub: (catId: string, sub: SubDraft) =>
+      dispatch({ type: "upsertSub", catId, sub, newId: newId("s") }),
     /** Deletes a subcategory; its transactions keep the category but lose the subcategory. */
-    deleteSub: (catId: string, subId: string) => dispatch({ type: "deleteSub", catId, subId }),
-    toggleSetting: (key: keyof Settings) => dispatch({ type: "toggleSetting", key }),
+    deleteSub: (catId: string, subId: string) =>
+      dispatch({ type: "deleteSub", catId, subId }),
+    toggleSetting: (key: keyof Settings) =>
+      dispatch({ type: "toggleSetting", key }),
   };
 }
 
@@ -124,7 +178,11 @@ type Derived = {
   catById: Map<string, Cat>;
 };
 
-const GuavaContext = createContext<{ state: State; actions: GuavaActions; derived: Derived } | null>(null);
+const GuavaContext = createContext<{
+  state: State;
+  actions: GuavaActions;
+  derived: Derived;
+} | null>(null);
 
 export function GuavaProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, init);
@@ -137,10 +195,15 @@ export function GuavaProvider({ children }: { children: ReactNode }) {
       reviewCount: reviewCount(state.txns),
       catById: new Map(state.cats.map((c) => [c.id, c])),
     }),
-    [daily, state.txns, state.cats]
+    [daily, state.txns, state.cats],
   );
-  const value = useMemo(() => ({ state, actions, derived }), [state, actions, derived]);
-  return <GuavaContext.Provider value={value}>{children}</GuavaContext.Provider>;
+  const value = useMemo(
+    () => ({ state, actions, derived }),
+    [state, actions, derived],
+  );
+  return (
+    <GuavaContext.Provider value={value}>{children}</GuavaContext.Provider>
+  );
 }
 
 /** Full store access: `{ state, actions, derived }`. */
@@ -180,7 +243,10 @@ export function useReviewCount(): number {
 }
 
 /** Daily spend totals (cents) keyed by DateKey, plus the heat-scale thresholds. */
-export function useDailyTotals(): { daily: Map<DateKey, DayTotal>; thresholds: HeatThresholds } {
+export function useDailyTotals(): {
+  daily: Map<DateKey, DayTotal>;
+  thresholds: HeatThresholds;
+} {
   const { daily, thresholds } = useGuava().derived;
   return { daily, thresholds };
 }
@@ -189,7 +255,10 @@ export function useDailyTotals(): { daily: Map<DateKey, DayTotal>; thresholds: H
 export function useCategoryStats(month?: Month): CategoryStat[] {
   const { state } = useGuava();
   const m = month ?? state.month;
-  return useMemo(() => categoryStats(state.txns, state.cats, m), [state.txns, state.cats, m]);
+  return useMemo(
+    () => categoryStats(state.txns, state.cats, m),
+    [state.txns, state.cats, m],
+  );
 }
 
 export function useMonthlyTotals() {
@@ -199,12 +268,28 @@ export function useMonthlyTotals() {
 
 // ---- Dashboard widget layout (per browser for now; per user once auth lands)
 
-export const ALL_WIDGET_IDS: WidgetId[] = ["cat", "year", "line", "cal", "share"];
+export const ALL_WIDGET_IDS: WidgetId[] = [
+  "cat",
+  "year",
+  "line",
+  "cal",
+  "share",
+];
 const NO_WIDGETS: Widget[] = [];
 const isWidgetList = (v: unknown): v is Widget[] =>
   Array.isArray(v) &&
-  v.every((w) => w && typeof w === "object" && ALL_WIDGET_IDS.includes((w as Widget).id) && ((w as Widget).size === "half" || (w as Widget).size === "full"));
+  v.every(
+    (w) =>
+      w &&
+      typeof w === "object" &&
+      ALL_WIDGET_IDS.includes((w as Widget).id) &&
+      ((w as Widget).size === "half" || (w as Widget).size === "full"),
+  );
 
 export function useWidgets() {
-  return useLocalStorage<Widget[]>("guava.widgets.v2", NO_WIDGETS, isWidgetList);
+  return useLocalStorage<Widget[]>(
+    "guava.widgets.v2",
+    NO_WIDGETS,
+    isWidgetList,
+  );
 }

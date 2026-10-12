@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /** A sidebar link. Shows a tooltip when the sidebar is collapsed. */
@@ -31,7 +35,9 @@ export function NavItem({
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex h-[34px] items-center gap-2.5 rounded-md px-2 transition-colors hover:bg-hover hover:text-foreground [&_svg]:size-4 [&_svg]:flex-none",
-        active ? "bg-active font-semibold text-foreground" : "font-medium text-ink-2"
+        active
+          ? "bg-active font-semibold text-foreground"
+          : "font-medium text-ink-2",
       )}
     >
       {icon}

@@ -5,13 +5,19 @@ export function money(cents: number): string {
   const n = cents / 100;
   return (
     (n < 0 ? "-$" : "$") +
-    Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    Math.abs(n).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
   );
 }
 
 /** "$1,235" (rounded to whole dollars) */
 export function money0(cents: number): string {
-  return (cents < 0 ? "-$" : "$") + Math.round(Math.abs(cents) / 100).toLocaleString("en-US");
+  return (
+    (cents < 0 ? "-$" : "$") +
+    Math.round(Math.abs(cents) / 100).toLocaleString("en-US")
+  );
 }
 
 const UNITS: [string, number][] = [
@@ -61,7 +67,10 @@ export function calendarAmount(cents: number): string {
 /** Display string for a money input: "1,234.56" ("" for null). */
 export function formatCentsInput(cents: number | null): string {
   if (cents == null) return "";
-  return (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function plural(n: number, one: string, many = one + "s"): string {

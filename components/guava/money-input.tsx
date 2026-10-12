@@ -41,12 +41,19 @@ export function MoneyInput({
   const [inputError, setInputError] = useState("");
   const shownError = inputError || error;
   return (
-    <Field label={label} htmlFor={id} hint={hint} error={shownError} hintTone={hintTone} className={className}>
+    <Field
+      label={label}
+      htmlFor={id}
+      hint={hint}
+      error={shownError}
+      hintTone={hintTone}
+      className={className}
+    >
       <div
         className={cn(
           "flex h-9 items-center rounded-lg border bg-card transition-colors focus-within:border-faint focus-within:ring-3 focus-within:ring-faint/35",
           shownError && "border-danger",
-          disabled && "opacity-50"
+          disabled && "opacity-50",
         )}
       >
         <span className="pl-3 text-ink-3">$</span>

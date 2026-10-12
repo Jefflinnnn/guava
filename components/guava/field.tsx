@@ -28,7 +28,9 @@ export function Field({
         <Label htmlFor={htmlFor} className="text-[13px]">
           {label}
         </Label>
-        {aside != null && <span className="text-xs text-ink-3 tabular">{aside}</span>}
+        {aside != null && (
+          <span className="text-xs text-ink-3 tabular">{aside}</span>
+        )}
       </div>
       {children}
       {error ? (
@@ -36,7 +38,14 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p className={cn("text-xs", hintTone === "warning" ? "text-warning" : "text-ink-3")}>{hint}</p>
+        <p
+          className={cn(
+            "text-xs",
+            hintTone === "warning" ? "text-warning" : "text-ink-3",
+          )}
+        >
+          {hint}
+        </p>
       ) : null}
     </div>
   );

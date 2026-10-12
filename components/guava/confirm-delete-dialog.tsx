@@ -3,7 +3,13 @@
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /** "Are you sure?" dialog with a red trash badge. Extra controls go in `children`. */
 export function ConfirmDeleteDialog({
@@ -40,7 +46,11 @@ export function ConfirmDeleteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="danger" disabled={confirmDisabled} onClick={onConfirm}>
+          <Button
+            variant="danger"
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>
