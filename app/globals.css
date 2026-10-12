@@ -39,82 +39,165 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* guava tokens (see design handoff README → Design Tokens) */
+  --color-surface: var(--surface);
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-ink: var(--foreground);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-faint: var(--faint);
+  --color-border-strong: var(--border-strong);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-text: var(--primary-text);
+  --color-pink: var(--pink);
+  --color-pink-soft: var(--pink-soft);
+  --color-pink-ink: var(--pink-ink);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-heat-0: var(--heat-0);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+  --color-heat-fg-0: var(--heat-fg-0);
+  --color-heat-fg-1: var(--heat-fg-1);
+  --color-heat-fg-2: var(--heat-fg-2);
+  --color-heat-fg-3: var(--heat-fg-3);
+  --color-heat-fg-4: var(--heat-fg-4);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-guide: var(--chart-guide);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-popover: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-picker: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --shadow-dialog: 0 20px 50px rgba(0, 0, 0, 0.2);
+  --shadow-lift: 0 4px 14px rgba(0, 0, 0, 0.08);
+
+  /* Radii: checkboxes 4 · nav items 6 · buttons/inputs 8 · cards/dialogs 12 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
 }
 
+/* guava (light). Built from 4 core colors; the rest is derived. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --g-primary: #3e8e5a;
+  --g-pink: #f4768a;
+  --g-cream: #fff6ec;
+  --g-brown: #2a1b22;
+
+  --background: color-mix(in oklch, var(--g-cream) 45%, white);
+  --foreground: var(--g-brown);
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--g-primary);
+  --primary-foreground: #ffffff;
+  --primary-hover: color-mix(in oklch, var(--g-primary) 82%, white);
+  --primary-text: var(--g-primary);
+  --surface: var(--g-cream);
+  --muted: color-mix(in oklch, var(--g-primary) 5%, var(--surface));
+  --hover: color-mix(in oklch, var(--g-primary) 8%, var(--surface));
+  --active: color-mix(in oklch, var(--g-primary) 12%, var(--surface));
+  --muted-foreground: var(--ink-3);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--foreground);
+  --accent: var(--hover);
+  --accent-foreground: var(--foreground);
+  --ink-2: #3f3f46;
+  --ink-3: #71717a;
+  --faint: #a1a1aa;
+  --border: color-mix(in oklch, var(--g-primary) 11%, white);
+  --border-strong: #d4d4d8;
+  --input: var(--border);
+  --ring: var(--faint);
+  --pink: var(--g-pink);
+  --pink-soft: color-mix(in oklch, var(--g-pink) 12%, white);
+  --pink-ink: color-mix(in oklch, var(--g-pink) 78%, black);
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+  --destructive: var(--danger);
+  --warning: #b45309;
+  --success: #16a34a;
+
+  /* Spend heat scale: 0 = no spend, 1–4 split at the 25/50/80th percentiles. */
+  --heat-0: #f3e6da;
+  --heat-1: color-mix(in oklch, var(--g-pink) 22%, white);
+  --heat-2: color-mix(in oklch, var(--g-pink) 48%, white);
+  --heat-3: var(--g-pink);
+  --heat-4: color-mix(in oklch, var(--g-pink) 68%, black);
+  --heat-fg-0: var(--foreground);
+  --heat-fg-1: var(--foreground);
+  --heat-fg-2: var(--foreground);
+  --heat-fg-3: var(--foreground);
+  --heat-fg-4: #ffffff;
+
+  --chart-grid: #f3e6da;
+  --chart-axis: #71717a;
+  --chart-guide: #d4d4d8;
+  --chart-1: var(--g-primary);
+  --chart-2: var(--g-pink);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --radius: 0.5rem;
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--hover);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
+/* guava-dark */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: var(--g-brown);
+  --foreground: var(--g-cream);
+  --card: #33232b;
+  --primary-hover: color-mix(in oklch, var(--g-primary) 85%, white);
+  --primary-text: var(--g-cream);
+  --surface: #24171d;
+  --muted: color-mix(in oklch, var(--g-cream) 7%, var(--g-brown));
+  --hover: color-mix(in oklch, var(--g-cream) 11%, var(--g-brown));
+  --active: #2f4a38;
+  --ink-2: color-mix(in oklch, var(--g-cream) 84%, var(--g-brown));
+  --ink-3: color-mix(in oklch, var(--g-cream) 66%, var(--g-brown));
+  --faint: color-mix(in oklch, var(--g-cream) 46%, var(--g-brown));
+  --border: color-mix(in oklch, var(--g-cream) 15%, var(--g-brown));
+  --border-strong: color-mix(in oklch, var(--g-cream) 28%, var(--g-brown));
+  --pink-soft: color-mix(in oklch, var(--g-pink) 20%, var(--g-brown));
+  --pink-ink: #f9a3b1;
+  --danger-soft: color-mix(in oklch, var(--danger) 22%, var(--g-brown));
+
+  /* Brighter means more in the dark scale. */
+  --heat-0: var(--muted);
+  --heat-1: color-mix(in oklch, var(--g-pink) 28%, var(--g-brown));
+  --heat-2: color-mix(in oklch, var(--g-pink) 52%, var(--g-brown));
+  --heat-3: color-mix(in oklch, var(--g-pink) 78%, var(--g-brown));
+  --heat-4: var(--g-pink);
+  --heat-fg-3: var(--g-brown);
+  --heat-fg-4: var(--g-brown);
+
+  --chart-grid: #3d2c34;
+  --chart-axis: #bcaea9;
+  --chart-guide: #5a4750;
 }
 
 @layer base {
@@ -122,9 +205,17 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-sm text-foreground;
   }
   html {
     @apply font-sans;
   }
+  .dark input,
+  .dark textarea {
+    background-color: var(--card);
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }
