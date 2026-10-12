@@ -1,9 +1,5 @@
-import { Page, PageHeader } from "@/components/shell/page";
+import { Dashboard } from "@/components/dashboard/dashboard";
 
 export default function DashboardPage() {
-  return (
-    <Page>
-      <PageHeader title="Dashboard" />
-    </Page>
-  );
+  return <Dashboard />;
 }
