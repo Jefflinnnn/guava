@@ -1,9 +1,5 @@
-import { Page, PageHeader } from "@/components/shell/page";
+import { CategoriesView } from "@/components/categories/categories-view";
 
 export default function CategoriesPage() {
-  return (
-    <Page width="medium">
-      <PageHeader title="Categories" />
-    </Page>
-  );
+  return <CategoriesView />;
 }
