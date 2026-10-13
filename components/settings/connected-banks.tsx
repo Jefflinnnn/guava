@@ -32,16 +32,15 @@ async function ConnectedBanks() {
   // Read from the database at request time, not build time.
   await connection();
 
-  const userId = await getCurrentUserId();
-  const items = await prisma.plaidItem.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      institutionName: true,
-      accounts: { select: { id: true, name: true, mask: true, subtype: true } },
-    },
-  });
+  const items = await loadItems();
+  if (!items) {
+    return (
+      <p role="alert" className="text-[13px] text-danger">
+        Couldn’t load connected banks. Check the database connection and
+        migrations.
+      </p>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -73,4 +72,25 @@ async function ConnectedBanks() {
       ))}
     </ul>
   );
+}
+
+// A database failure should only break this card, not the whole Settings page.
+async function loadItems() {
+  try {
+    const userId = await getCurrentUserId();
+    return await prisma.plaidItem.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        institutionName: true,
+        accounts: {
+          select: { id: true, name: true, mask: true, subtype: true },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load connected banks", error);
+    return null;
+  }
 }
