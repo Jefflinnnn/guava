@@ -5,7 +5,7 @@ export type DateKey = string;
 export type Month = { year: number; month: number };
 
 export type Txn = {
-  id: number;
+  id: string;
   date: DateKey;
   name: string;
   amountCents: number;
@@ -56,3 +56,14 @@ export type Settings = {
 };
 
 export type DayTotal = { sum: number; n: number };
+
+export type UserInfo = { name: string; email: string };
+
+/** Everything the app loads for the signed-in user on first render. */
+export type Snapshot = {
+  user: UserInfo;
+  txns: Txn[];
+  cats: Cat[];
+  settings: Settings;
+  widgets: Widget[];
+};

@@ -12,11 +12,15 @@ datasource db {
 
 // Placeholder user. Swap for your auth provider's user model when you add auth.
 model User {
-  id         String      @id @default(cuid())
-  email      String      @unique
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id         String        @id @default(cuid())
+  email      String        @unique
+  name       String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
   plaidItems PlaidItem[]
+  categories Category[]
+  expenses   Expense[]
+  settings   UserSettings?
 }
 
 // One row per bank connection ("Item" in Plaid terms).
@@ -49,6 +53,88 @@ model Account {
   subtype        String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  expenses       Expense[]
 
   @@index([plaidItemId])
+}
+
+// A spending category with a monthly budget. Names are unique per user.
+model Category {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String        @db.VarChar(24)
+  // Any CSS color: an oklch() preset or a #hex custom pick.
+  color       String        @db.VarChar(64)
+  budgetCents Int           @default(0)
+  // Locked categories can't be edited or deleted until unlocked.
+  locked      Boolean       @default(false)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  subs        Subcategory[]
+  // Restrict: move a category's expenses elsewhere before deleting it.
+  expenses    Expense[]
+
+  @@unique([userId, name])
+}
+
+model Subcategory {
+  id          String    @id @default(cuid())
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String    @db.VarChar(24)
+  budgetCents Int       @default(0)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expenses    Expense[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}
+
+// One spend: imported from Plaid or entered by hand (all Plaid fields null).
+// Expenses only for now: amounts are positive; refunds and income come later.
+model Expense {
+  id                 String       @id @default(cuid())
+  userId             String
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // A calendar day with no time zone, read and written as YYYY-MM-DD.
+  date               DateTime     @db.Date
+  name               String       @db.VarChar(40)
+  amountCents        Int
+  categoryId         String
+  category           Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategoryId      String?
+  subcategory        Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  needsReview        Boolean      @default(true)
+  note               String       @default("") @db.VarChar(200)
+  accountId          String?
+  account            Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  // Unique so a repeated /transactions/sync never duplicates a row.
+  plaidTransactionId String?      @unique
+  // Plaid's original merchant name; `name` is the user's editable copy.
+  merchantNameRaw    String?
+  pending            Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, needsReview])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([accountId])
+}
+
+// Per-user preferences from the Settings page and the dashboard layout.
+model UserSettings {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  autoCategorizeBills Boolean  @default(true)
+  weeklyReminder      Boolean  @default(true)
+  bigPurchaseAlert    Boolean  @default(false)
+  // Dashboard widgets in display order: [{ id, size }].
+  widgets             Json     @default("[]")
+  updatedAt           DateTime @updatedAt
 }

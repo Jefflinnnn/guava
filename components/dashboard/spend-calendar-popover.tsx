@@ -11,15 +11,12 @@ import {
   addMonths,
   compareMonths,
   isInMonth,
-  MAX_MONTH,
-  MIN_MONTH,
   monthLabel,
   monthOf,
   monthShortLabel,
-  TODAY,
 } from "@/lib/guava/dates";
 import { moneyFit } from "@/lib/guava/format";
-import { useDailyTotals } from "@/lib/guava/store";
+import { useDailyTotals, useMonthBounds, useToday } from "@/lib/guava/store";
 import type { DateKey, Month } from "@/lib/guava/types";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +37,8 @@ export function SpendCalendarPopover({
   onPick: (month: Month) => void;
 }) {
   const { daily } = useDailyTotals();
+  const today = useToday();
+  const bounds = useMonthBounds();
   const [month, setMonth] = useState(initialMonth);
   const [hovered, setHovered] = useState<DateKey | null>(null);
 
@@ -50,7 +49,7 @@ export function SpendCalendarPopover({
 
   let spent = 0;
   for (const [k, d] of daily)
-    if (isInMonth(k, month) && k <= TODAY) spent += d.sum;
+    if (isInMonth(k, month) && k <= today) spent += d.sum;
 
   return (
     <PopoverContent
@@ -61,7 +60,7 @@ export function SpendCalendarPopover({
       <div className="flex items-center gap-1.5">
         <PageButton
           label="Previous month"
-          disabled={compareMonths(month, MIN_MONTH) <= 0}
+          disabled={compareMonths(month, bounds.min) <= 0}
           onClick={() => page(addMonths(month, -1))}
         >
           <ChevronLeft />
@@ -74,7 +73,7 @@ export function SpendCalendarPopover({
         </div>
         <PageButton
           label="Next month"
-          disabled={compareMonths(month, MAX_MONTH) >= 0}
+          disabled={compareMonths(month, bounds.max) >= 0}
           onClick={() => page(addMonths(month, 1))}
         >
           <ChevronRight />
@@ -103,7 +102,7 @@ export function SpendCalendarPopover({
           variant="outline"
           size="sm"
           className="text-xs"
-          onClick={() => page(monthOf(TODAY))}
+          onClick={() => page(monthOf(today))}
         >
           This month
         </Button>

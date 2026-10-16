@@ -18,10 +18,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { formatLongDate, TODAY } from "@/lib/guava/dates";
+import { formatLongDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import { EXPENSE_CAP_CENTS } from "@/lib/guava/money-input";
-import { useActions, useCategories, useTxns } from "@/lib/guava/store";
+import {
+  useActions,
+  useCategories,
+  useToday,
+  useTxns,
+} from "@/lib/guava/store";
 import type { Cat, DateKey, Txn } from "@/lib/guava/types";
 
 import { NAME_MAX, NOTE_MAX } from "./layout";
@@ -36,7 +41,7 @@ type Draft = {
   reviewed: boolean;
 };
 
-function draftFrom(txn: Txn | undefined, cats: Cat[]): Draft {
+function draftFrom(txn: Txn | undefined, cats: Cat[], today: DateKey): Draft {
   if (txn)
     return {
       name: txn.name,
@@ -50,7 +55,7 @@ function draftFrom(txn: Txn | undefined, cats: Cat[]): Draft {
   return {
     name: "",
     amountCents: null,
-    date: TODAY,
+    date: today,
     catId: cats[0]?.id ?? "",
     subId: null,
     note: "",
@@ -73,7 +78,7 @@ export function ExpenseDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  txnId: number | null;
+  txnId: string | null;
 }) {
   const txns = useTxns();
   const isEdit = txnId != null;
@@ -113,8 +118,9 @@ function ExpenseForm({
   onDone: () => void;
 }) {
   const cats = useCategories();
+  const today = useToday();
   const { upsertTxn, deleteTxn } = useActions();
-  const [draft, setDraft] = useState(() => draftFrom(txn, cats));
+  const [draft, setDraft] = useState(() => draftFrom(txn, cats, today));
   const [amountTouched, setAmountTouched] = useState(false);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
