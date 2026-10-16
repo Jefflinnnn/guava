@@ -5,6 +5,7 @@ Personal budgeting app built with:
 - **Next.js 16** (App Router, TypeScript, React 19) for both frontend and backend
 - **shadcn/ui** (Nova preset) + Tailwind CSS v4
 - **Neon** Postgres through **Prisma 7** (Neon serverless driver adapter)
+- **Better Auth** for email/password and Google sign-in (sessions stored in Postgres)
 - **Plaid** for connecting bank accounts
 
 ## Setup
@@ -27,12 +28,19 @@ cp .env.example .env
 | `DIRECT_URL`                      | Same screen, pooling turned **off**                                           |
 | `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
 | `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `BETTER_AUTH_SECRET`              | Same command as `ENCRYPTION_KEY` (use a different value)                      |
+| `BETTER_AUTH_URL`                 | The app's URL, e.g. `http://localhost:3000`                                   |
+| `GOOGLE_CLIENT_ID`, `_SECRET`     | Optional. Google Cloud → Credentials → OAuth client (Web application)         |
 
-**3. Create the tables** in Neon:
+**3. Create the tables** in Neon by applying the committed migrations:
 
 ```bash
-pnpm db:migrate --name init
+pnpm db:deploy
 ```
+
+If your database was created earlier with `pnpm db:migrate --name init` (before
+migrations were committed), mark the baseline as applied first:
+`pnpm prisma migrate resolve --applied 20261015000000_init`.
 
 **4. Run it:**
 
@@ -40,16 +48,20 @@ pnpm db:migrate --name init
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
+Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000, create an account, and on the **Connect your bank** step (or in Settings) pick any institution and sign in with `user_good` / `pass_good`.
 
 ## Project layout
 
 ```
-prisma/schema.prisma          User, PlaidItem, Account models
+prisma/schema.prisma          User, Session, Account, Verification (auth); PlaidItem, BankAccount
+prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
+proxy.ts                      Redirects signed-out visitors to /login
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
-  page.tsx                    Home: connected banks list + Link button
+  (auth)/                     /login, /signup, /connect (onboarding step 2)
+  (app)/                      Dashboard, Expenses, Categories, Settings (signed in)
   api/
+    auth/[...all]/            Better Auth endpoints
     health/                   GET: database ping
     plaid/
       create-link-token/      POST: step 1 of Plaid Link
@@ -62,7 +74,9 @@ lib/
   prisma.ts                   Shared Prisma client (Neon adapter, pooled URL)
   plaid.ts                    Plaid API client
   crypto.ts                   AES-256-GCM encryption for stored access tokens
-  current-user.ts             Demo user stub; replace with real auth
+  auth.ts                     Better Auth config (Prisma adapter, Google provider)
+  auth-actions.ts             Server Actions: log in, sign up, log out, email lookup
+  current-user.ts             Session helpers for pages and route handlers
 generated/prisma/             Generated Prisma client (gitignored)
 ```
 
@@ -79,6 +93,6 @@ generated/prisma/             Generated Prisma client (gitignored)
 
 ## Before going to production
 
-- **Add auth.** `lib/current-user.ts` returns a single demo user. Replace it with a real auth provider; every Plaid route already goes through it.
+- **Password reset email.** "Forgot password?" only shows a note; wire `sendResetPassword` in `lib/auth.ts` to an email provider.
 - **Verify webhooks.** `app/api/plaid/webhook` logs events but doesn't check Plaid's signature yet.
 - **Keep access tokens server-side.** They're encrypted in the database and never returned to the browser. Keep `ENCRYPTION_KEY` out of git.

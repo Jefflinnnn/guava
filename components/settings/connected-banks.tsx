@@ -60,7 +60,7 @@ async function ConnectedBanks() {
             {item.institutionName ?? "Bank"}
           </p>
           <ul className="mt-0.5 text-[13px] text-ink-3">
-            {item.accounts.map((a) => (
+            {item.bankAccounts.map((a) => (
               <li key={a.id} className="truncate">
                 {a.name}
                 {a.mask ? ` ••${a.mask}` : ""}
@@ -84,7 +84,7 @@ async function loadItems() {
       select: {
         id: true,
         institutionName: true,
-        accounts: {
+        bankAccounts: {
           select: { id: true, name: true, mask: true, subtype: true },
         },
       },

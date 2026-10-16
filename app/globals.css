@@ -72,6 +72,14 @@
   --color-chart-grid: var(--chart-grid);
   --color-chart-axis: var(--chart-axis);
   --color-chart-guide: var(--chart-guide);
+  --color-auth-panel: var(--auth-panel);
+  --color-auth-panel-fg: var(--auth-panel-fg);
+  --color-auth-panel-muted: var(--auth-panel-muted);
+  --color-auth-grid-0: var(--auth-grid-0);
+  --color-auth-grid-1: var(--auth-grid-1);
+  --color-auth-grid-2: var(--auth-grid-2);
+  --color-auth-grid-3: var(--auth-grid-3);
+  --color-auth-grid-4: var(--auth-grid-4);
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -154,6 +162,16 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
 
+  /* Auth brand panel (login / signup / connect): dark in both themes. */
+  --auth-panel: var(--g-brown);
+  --auth-panel-fg: var(--g-cream);
+  --auth-panel-muted: #e9dcd3;
+  --auth-grid-0: color-mix(in srgb, var(--g-cream) 8%, transparent);
+  --auth-grid-1: color-mix(in srgb, var(--g-pink) 28%, transparent);
+  --auth-grid-2: color-mix(in srgb, var(--g-pink) 50%, transparent);
+  --auth-grid-3: color-mix(in srgb, var(--g-pink) 78%, transparent);
+  --auth-grid-4: var(--g-pink);
+
   --radius: 0.5rem;
   --sidebar: var(--surface);
   --sidebar-foreground: var(--foreground);
@@ -198,6 +216,8 @@
   --chart-grid: #3d2c34;
   --chart-axis: #bcaea9;
   --chart-guide: #5a4750;
+
+  --auth-panel: #1d1217;
 }
 
 @layer base {
