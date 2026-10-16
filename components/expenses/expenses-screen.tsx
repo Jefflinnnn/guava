@@ -20,7 +20,7 @@ export function ExpensesScreen() {
 
   // `open` is kept apart from the edited id so the dialog's title doesn't
   // flip to "Add" while it animates closed.
-  const [editor, setEditor] = useState<{ open: boolean; id: number | null }>({
+  const [editor, setEditor] = useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
   });

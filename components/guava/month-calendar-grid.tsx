@@ -4,12 +4,11 @@ import {
   daysInMonth,
   firstWeekday,
   keyOf,
-  TODAY,
   WEEKDAYS_SHORT,
 } from "@/lib/guava/dates";
 import { calendarAmount } from "@/lib/guava/format";
 import { HEAT_CLASSES, heatLevel } from "@/lib/guava/heat";
-import { useDailyTotals } from "@/lib/guava/store";
+import { useDailyTotals, useToday } from "@/lib/guava/store";
 import type { DateKey, Month } from "@/lib/guava/types";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +53,7 @@ export function MonthCalendarGrid({
   className?: string;
 }) {
   const { daily, thresholds } = useDailyTotals();
+  const today = useToday();
   const v = VARIANTS[variant];
   const lead = firstWeekday(month);
   const days = Array.from({ length: daysInMonth(month) }, (_, i) =>
@@ -74,9 +74,9 @@ export function MonthCalendarGrid({
         <div key={`pad${i}`} />
       ))}
       {days.map((key, i) => {
-        const future = key > TODAY;
+        const future = key > today;
         const sum = daily.get(key)?.sum ?? 0;
-        const isToday = key === TODAY;
+        const isToday = key === today;
         const Tag = onPick && !future ? "button" : "div";
         return (
           <Tag

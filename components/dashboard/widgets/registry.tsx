@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { ALL_WIDGET_IDS } from "@/lib/guava/store";
+import { ALL_WIDGET_IDS } from "@/lib/guava/widgets";
 import type { Widget, WidgetId, WidgetSize } from "@/lib/guava/types";
 
 import { CategoryShareWidget } from "./category-share";

@@ -32,15 +32,7 @@ export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** Two-letter weekday labels for calendar headers: Su Mo Tu … */
 export const WEEKDAYS_SHORT = WEEKDAYS.map((d) => d.slice(0, 2));
 
-/**
- * The sample data is pinned to a fixed "today" so renders are deterministic
- * (and identical on server and client). Swap for the real date with live data.
- */
-export const TODAY: DateKey = "2026-10-04";
-export const MIN_MONTH: Month = { year: 2024, month: 0 };
-export const MAX_MONTH: Month = { year: 2026, month: 9 };
-export const DEFAULT_MONTH: Month = { year: 2026, month: 8 };
-
+/** The local calendar date of `d`. */
 export function toKey(d: Date): DateKey {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -49,6 +41,14 @@ export function toKey(d: Date): DateKey {
 export function fromKey(key: DateKey): Date {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d, 12);
+}
+
+export function isDateKey(v: unknown): v is DateKey {
+  return (
+    typeof v === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+    toKey(fromKey(v)) === v
+  );
 }
 
 export function keyOf(year: number, month: number, day: number): DateKey {
@@ -87,7 +87,7 @@ export function sameMonth(a: Month, b: Month): boolean {
   return a.year === b.year && a.month === b.month;
 }
 
-export function clampMonth(m: Month, min = MIN_MONTH, max = MAX_MONTH): Month {
+export function clampMonth(m: Month, min: Month, max: Month): Month {
   if (compareMonths(m, min) < 0) return min;
   if (compareMonths(m, max) > 0) return max;
   return m;

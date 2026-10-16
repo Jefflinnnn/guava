@@ -1,4 +1,5 @@
 import { Sidebar } from "./sidebar";
+import { SyncErrorBanner } from "./sync-error-banner";
 
 /** Full-viewport `Sidebar | Main` layout; only Main scrolls. */
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -6,6 +7,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col overflow-auto">
+        <SyncErrorBanner />
         {children}
       </main>
     </div>
