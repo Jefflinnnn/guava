@@ -80,3 +80,15 @@ export function plural(n: number, one: string, many = one + "s"): string {
 export function initialOf(name: string): string {
   return (name.trim()[0] || "?").toUpperCase();
 }
+
+/** Up to two initials from a person's name: "Buzz Peterson" → "BP". */
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    words
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
