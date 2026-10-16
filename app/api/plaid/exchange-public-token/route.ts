@@ -1,5 +1,5 @@
 import { encrypt } from "@/lib/crypto";
-import { getCurrentUserId } from "@/lib/current-user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/current-user";
 import { getPlaidClient, plaidCountryCodes } from "@/lib/plaid";
 import { prisma } from "@/lib/prisma";
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         type: acct.type,
         subtype: acct.subtype ?? null,
       };
-      await prisma.account.upsert({
+      await prisma.bankAccount.upsert({
         where: { plaidAccountId: acct.account_id },
         update: fields,
         create: {
@@ -75,6 +75,8 @@ export async function POST(request: Request) {
       accountCount: accountsData.accounts.length,
     });
   } catch (error) {
+    const unauthorized = unauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     console.error("exchange-public-token failed", error);
     return Response.json({ error: "Could not link account" }, { status: 500 });
   }

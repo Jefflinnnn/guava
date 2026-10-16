@@ -10,35 +10,93 @@ datasource db {
   provider = "postgresql"
 }
 
-// Placeholder user. Swap for your auth provider's user model when you add auth.
+// --- Auth (Better Auth, see lib/auth.ts) ---
+// User, Session, Account and Verification follow Better Auth's core schema.
+// Field names must match it; add app-specific fields freely.
+
 model User {
-  id         String      @id @default(cuid())
-  email      String      @unique
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  plaidItems PlaidItem[]
+  id            String      @id @default(cuid())
+  name          String
+  email         String      @unique
+  emailVerified Boolean     @default(false)
+  image         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  plaidItems    PlaidItem[]
 }
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// A login method for a user: "credential" (email + password hash) or an
+// OAuth provider like "google". Not a bank account; see BankAccount below.
+model Account {
+  id                    String    @id
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// Short-lived tokens (email verification, password reset, OAuth state).
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// --- Plaid ---
 
 // One row per bank connection ("Item" in Plaid terms).
 model PlaidItem {
-  id                 String    @id @default(cuid())
+  id                 String        @id @default(cuid())
   userId             String
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plaidItemId        String    @unique
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plaidItemId        String        @unique
   // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never send to the browser.
   accessToken        String
   institutionId      String?
   institutionName    String?
   // Cursor for /transactions/sync, so each sync only pulls what changed.
   transactionsCursor String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  accounts           Account[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  bankAccounts       BankAccount[]
 
   @@index([userId])
 }
 
-model Account {
+// A checking/savings/credit account inside a PlaidItem.
+model BankAccount {
   id             String    @id @default(cuid())
   plaidItemId    String
   item           PlaidItem @relation(fields: [plaidItemId], references: [id], onDelete: Cascade)

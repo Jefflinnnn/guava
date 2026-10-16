@@ -1,4 +1,4 @@
-import { getCurrentUserId } from "@/lib/current-user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/current-user";
 import { getPlaidClient, plaidCountryCodes, plaidProducts } from "@/lib/plaid";
 
 // Step 1 of Plaid Link: the server creates a short-lived link_token
@@ -20,6 +20,8 @@ export async function POST() {
 
     return Response.json({ linkToken: data.link_token });
   } catch (error) {
+    const unauthorized = unauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     console.error("create-link-token failed", error);
     return Response.json(
       { error: "Could not create link token" },
