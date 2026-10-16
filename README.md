@@ -28,10 +28,11 @@ cp .env.example .env
 | `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
 | `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 
-**3. Create the tables** in Neon:
+**3. Create the tables** in Neon, then load sample data (about three years of expenses for the demo user, ending today):
 
 ```bash
-pnpm db:migrate --name init
+pnpm db:deploy
+pnpm db:seed
 ```
 
 **4. Run it:**
@@ -40,15 +41,20 @@ pnpm db:migrate --name init
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
+Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000. To try Plaid, go to **Settings**, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
 
 ## Project layout
 
 ```
-prisma/schema.prisma          User, PlaidItem, Account models
+prisma/
+  schema.prisma               Users, bank connections, categories, expenses, settings
+  migrations/                 SQL migrations (pnpm db:deploy applies them)
+  seed.ts                     Sample data for the demo user (pnpm db:seed)
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
-  page.tsx                    Home: connected banks list + Link button
+  error.tsx                   Shown when the app can't load (e.g. database down)
+  (app)/                      Dashboard, Expenses, Categories, Settings
+    layout.tsx                Loads the user's data and wraps the app shell
   api/
     health/                   GET: database ping
     plaid/
@@ -63,6 +69,10 @@ lib/
   plaid.ts                    Plaid API client
   crypto.ts                   AES-256-GCM encryption for stored access tokens
   current-user.ts             Demo user stub; replace with real auth
+  guava/
+    store.tsx                 Client store: instant updates, saved via server actions
+    server/snapshot.ts        Loads a user's data from the database
+    server/actions.ts         Server actions that validate and save each change
 generated/prisma/             Generated Prisma client (gitignored)
 ```
 
@@ -75,6 +85,7 @@ generated/prisma/             Generated Prisma client (gitignored)
 | `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript                                         |
 | `pnpm db:migrate`              | Create and apply a migration after editing the schema (dev) |
 | `pnpm db:deploy`               | Apply existing migrations (production / CI)                 |
+| `pnpm db:seed`                 | Reset the demo user's data to fresh sample data             |
 | `pnpm db:studio`               | Browse your Neon data in Prisma Studio                      |
 
 ## Before going to production
