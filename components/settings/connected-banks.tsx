@@ -5,30 +5,29 @@ import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { getCurrentUserId } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
-export default function Home() {
+/** Plaid-linked banks for the current user, with the "Connect a bank" flow. */
+export function ConnectedBanksCard() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16">
-      <section className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-heading text-lg font-semibold">
-              Connected banks
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Linked through Plaid, stored in Neon with Prisma.
-            </p>
-          </div>
-          <PlaidLinkButton />
+    <section className="bg-card text-card-foreground rounded-xl border p-6 shadow-card">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-lg font-semibold">
+            Connected banks
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Linked through Plaid, stored in Neon with Prisma.
+          </p>
         </div>
-        <div className="mt-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
-          >
-            <ConnectedBanks />
-          </Suspense>
-        </div>
-      </section>
-    </main>
+        <PlaidLinkButton />
+      </div>
+      <div className="mt-6">
+        <Suspense
+          fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
+        >
+          <ConnectedBanks />
+        </Suspense>
+      </div>
+    </section>
   );
 }
 
