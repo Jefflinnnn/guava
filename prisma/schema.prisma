@@ -15,16 +15,17 @@ datasource db {
 // Field names must match it; add app-specific fields freely.
 
 model User {
-  id            String      @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
-  email         String      @unique
-  emailVerified Boolean     @default(false)
+  email         String           @unique
+  emailVerified Boolean          @default(false)
   image         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   sessions      Session[]
   accounts      Account[]
   plaidItems    PlaidItem[]
+  integrations  IntegrationKeys?
 }
 
 model Session {
@@ -72,6 +73,30 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@index([identifier])
+}
+
+// --- Integrations (bring your own keys) ---
+
+// The user's own Plaid and Neon credentials, set on the Integrations page.
+// Secrets are encrypted with ENCRYPTION_KEY (see lib/crypto.ts) and are never
+// sent back to the browser. A *VerifiedAt timestamp means the last saved keys
+// passed a live test.
+model IntegrationKeys {
+  userId          String    @id
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // "sandbox" | "production"
+  plaidEnv        String?
+  plaidClientId   String?
+  plaidSecret     String?
+  plaidVerifiedAt DateTime?
+  neonUrl         String?
+  // Display details from the last successful Neon test.
+  neonDatabase    String?
+  neonRegion      String?
+  neonPgVersion   Int?
+  neonVerifiedAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // --- Plaid ---
