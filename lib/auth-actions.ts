@@ -104,8 +104,8 @@ export async function signUp(input: {
     console.error("signUp failed", error);
     return { formError: GENERIC_ERROR };
   }
-  // TODO(workspace): send new users to the connect-your-database step.
-  redirect("/");
+  // Step 2: connect the database that holds their data.
+  redirect("/connect");
 }
 
 export async function logOut() {

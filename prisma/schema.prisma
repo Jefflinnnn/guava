@@ -24,6 +24,7 @@ model User {
   updatedAt     DateTime      @updatedAt
   sessions      Session[]
   authAccounts  AuthAccount[]
+  workspace     Workspace?
   plaidItems    PlaidItem[]
 }
 
@@ -74,6 +75,26 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@index([identifier])
+}
+
+// --- Workspace ---
+
+// Where a user's own data lives: their Neon database (see
+// prisma/user/schema.prisma). Every signed-in user needs one before using
+// the app. This is the only user secret the app database holds.
+model Workspace {
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never sent to the browser.
+  neonUrl       String
+  // Display details from the last successful connection test.
+  database      String
+  region        String
+  pgVersion     Int
+  // Name of the last lib/user-db migration applied to this database.
+  schemaVersion String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // --- Plaid ---

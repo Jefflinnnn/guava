@@ -47,7 +47,7 @@ migrations were committed), mark the baseline as applied first:
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000 and create an account (signed-out visitors go to `/login`). In **Settings**, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
+Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000 and create an account (signed-out visitors go to `/login`). Step 2 asks for **your own Neon connection string**: create a separate, empty database for it (Neon console → Databases → New database). guava creates its tables there and keeps your expenses and categories in it. In **Settings**, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
 
 ## Project layout
 
@@ -55,9 +55,10 @@ Check http://localhost:3000/api/health first; it should report `"database": "con
 prisma/schema.prisma          User, Session, AuthAccount, Verification (auth); PlaidItem, Account (banks)
 prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
 proxy.ts                      Sends visitors without a session cookie to /login
+prisma/user/schema.prisma     Tables in each user's own database (their workspace)
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
-  (auth)/                     /login and /signup
+  (auth)/                     /login, /signup, /connect (step 2: the user's database)
   page.tsx                    Home: connected banks list + Link button
   api/
     auth/[...all]/            Better Auth endpoints
@@ -71,6 +72,8 @@ components/
   ui/                         shadcn components (add more: pnpm dlx shadcn@latest add dialog)
 lib/
   auth.ts                     Better Auth config
+  workspace.ts                The user's own database: connection test, requireWorkspace, getUserDb
+  user-db/                    Client and migration runner for users' databases
   current-user.ts             Session helpers (getSession, requireUser, getCurrentUserId)
   prisma.ts                   Shared Prisma client (Neon adapter, pooled URL)
   plaid.ts                    Plaid API client
@@ -78,16 +81,22 @@ lib/
 generated/prisma/             Generated Prisma client (gitignored)
 ```
 
+## Two databases
+
+- **The app database** (`DATABASE_URL`, `prisma/schema.prisma`): logins, sessions and, per user, an encrypted `Workspace` row pointing at their own database. Change it with `pnpm db:migrate` and apply with `pnpm db:deploy`.
+- **Each user's database** (`prisma/user/schema.prisma`): their data. Not managed by `prisma migrate`. After editing the schema, run `pnpm user-db:migration <name>` to generate `lib/user-db/migrations/NNNN_<name>.ts`. guava applies pending migrations to a user's database when they connect it and on their next visit after a deploy.
+
 ## Scripts
 
-| Command                        | Does                                                        |
-| ------------------------------ | ----------------------------------------------------------- |
-| `pnpm dev`                     | Dev server                                                  |
-| `pnpm build` / `pnpm start`    | Production build / serve                                    |
-| `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript                                         |
-| `pnpm db:migrate`              | Create and apply a migration after editing the schema (dev) |
-| `pnpm db:deploy`               | Apply existing migrations (production / CI)                 |
-| `pnpm db:studio`               | Browse your Neon data in Prisma Studio                      |
+| Command                         | Does                                                        |
+| ------------------------------- | ----------------------------------------------------------- |
+| `pnpm dev`                      | Dev server                                                  |
+| `pnpm build` / `pnpm start`     | Production build / serve                                    |
+| `pnpm lint` / `pnpm typecheck`  | ESLint / TypeScript                                         |
+| `pnpm db:migrate`               | Create and apply a migration after editing the schema (dev) |
+| `pnpm db:deploy`                | Apply existing migrations (production / CI)                 |
+| `pnpm user-db:migration <name>` | Generate the next migration for users' databases            |
+| `pnpm db:studio`                | Browse your Neon data in Prisma Studio                      |
 
 ## Before going to production
 

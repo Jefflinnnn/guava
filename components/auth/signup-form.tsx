@@ -89,7 +89,7 @@ export function SignupForm() {
     setFormError("");
     if (nameErr || formatErr || taken || !pwOk || !terms) return;
     startTransition(async () => {
-      // Redirects to the dashboard on success.
+      // Redirects to step 2 (connect your database) on success.
       const result = await signUp({ name, email, password });
       if (result.emailTaken) {
         setTakenEmails((list) => [...list, normalized]);

@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma generate --schema prisma/user/schema.prisma && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma generate --schema prisma/user/schema.prisma",
     "typecheck": "next typegen && tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "user-db:migration": "node scripts/user-db-migration.mjs",
     "db:studio": "prisma studio",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

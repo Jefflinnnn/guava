@@ -1,0 +1,27 @@
+// Schema for each user's OWN Neon database (their workspace). The app
+// database (prisma/schema.prisma) holds auth and a pointer to this one.
+//
+// Not managed by `prisma migrate`: guava applies lib/user-db/migrations to
+// every workspace itself, on connect and on the next visit after a deploy.
+// After editing this file, run `pnpm user-db:migration <name>`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../generated/user-prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Single row (id = 1): preferences from the Settings page and the
+// dashboard layout.
+model Settings {
+  id                  Int      @id @default(1)
+  autoCategorizeBills Boolean  @default(true)
+  weeklyReminder      Boolean  @default(true)
+  bigPurchaseAlert    Boolean  @default(false)
+  // Dashboard widgets in display order: [{ id, size }].
+  widgets             Json     @default("[]")
+  updatedAt           DateTime @updatedAt
+}

@@ -1,11 +1,13 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { requireUser } from "@/lib/current-user";
 import { GuavaProvider } from "@/lib/guava/store";
+import { requireWorkspace } from "@/lib/workspace";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  // The proxy only checks that a session cookie exists; this verifies it.
-  const user = await requireUser();
+  // The proxy only checks that a session cookie exists; this verifies it,
+  // sends users without a workspace database to /connect, and brings that
+  // database's tables up to date.
+  const { user } = await requireWorkspace();
 
   return (
     <GuavaProvider>
