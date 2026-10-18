@@ -28,11 +28,15 @@ cp .env.example .env
 | `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
 | `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 
-**3. Create the tables** in Neon:
+**3. Create the tables** in Neon by applying the committed migrations:
 
 ```bash
-pnpm db:migrate --name init
+pnpm db:deploy
 ```
+
+If your database was created earlier with `pnpm db:migrate --name init` (before
+migrations were committed), mark the baseline as applied first:
+`pnpm prisma migrate resolve --applied 20261015000000_init`.
 
 **4. Run it:**
 
@@ -46,6 +50,7 @@ Check http://localhost:3000/api/health first; it should report `"database": "con
 
 ```
 prisma/schema.prisma          User, PlaidItem, Account models
+prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
   page.tsx                    Home: connected banks list + Link button
