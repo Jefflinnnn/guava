@@ -5,6 +5,7 @@ Personal budgeting app built with:
 - **Next.js 16** (App Router, TypeScript, React 19) for both frontend and backend
 - **shadcn/ui** (Nova preset) + Tailwind CSS v4
 - **Neon** Postgres through **Prisma 7** (Neon serverless driver adapter)
+- **Better Auth** for email + password accounts and sessions
 - **Plaid** for connecting bank accounts
 
 ## Setup
@@ -27,6 +28,8 @@ cp .env.example .env
 | `DIRECT_URL`                      | Same screen, pooling turned **off**                                           |
 | `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
 | `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `BETTER_AUTH_SECRET`              | Same command as `ENCRYPTION_KEY` (use a different value)                      |
+| `BETTER_AUTH_URL`                 | The app's URL, e.g. `http://localhost:3000`                                   |
 
 **3. Create the tables** in Neon by applying the committed migrations:
 
@@ -49,12 +52,13 @@ Check http://localhost:3000/api/health first; it should report `"database": "con
 ## Project layout
 
 ```
-prisma/schema.prisma          User, PlaidItem, Account models
+prisma/schema.prisma          User, Session, AuthAccount, Verification (auth); PlaidItem, Account (banks)
 prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
   page.tsx                    Home: connected banks list + Link button
   api/
+    auth/[...all]/            Better Auth endpoints
     health/                   GET: database ping
     plaid/
       create-link-token/      POST: step 1 of Plaid Link
@@ -64,10 +68,11 @@ components/
   plaid-link-button.tsx       Client component that runs the Link flow
   ui/                         shadcn components (add more: pnpm dlx shadcn@latest add dialog)
 lib/
+  auth.ts                     Better Auth config
+  current-user.ts             Session helpers (getSession, requireUser, getCurrentUserId)
   prisma.ts                   Shared Prisma client (Neon adapter, pooled URL)
   plaid.ts                    Plaid API client
   crypto.ts                   AES-256-GCM encryption for stored access tokens
-  current-user.ts             Demo user stub; replace with real auth
 generated/prisma/             Generated Prisma client (gitignored)
 ```
 
