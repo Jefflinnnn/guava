@@ -74,6 +74,7 @@ lib/
   auth.ts                     Better Auth config
   workspace.ts                The user's own database: connection test, requireWorkspace, getUserDb
   user-db/                    Client and migration runner for users' databases
+  guava/server/               Loads (snapshot.ts) and saves (actions.ts) app data in the user's database
   current-user.ts             Session helpers (getSession, requireUser, getCurrentUserId)
   prisma.ts                   Shared Prisma client (Neon adapter, pooled URL)
   plaid.ts                    Plaid API client
@@ -84,7 +85,7 @@ generated/prisma/             Generated Prisma client (gitignored)
 ## Two databases
 
 - **The app database** (`DATABASE_URL`, `prisma/schema.prisma`): logins, sessions and, per user, an encrypted `Workspace` row pointing at their own database. Change it with `pnpm db:migrate` and apply with `pnpm db:deploy`.
-- **Each user's database** (`prisma/user/schema.prisma`): their data. Not managed by `prisma migrate`. After editing the schema, run `pnpm user-db:migration <name>` to generate `lib/user-db/migrations/NNNN_<name>.ts`. guava applies pending migrations to a user's database when they connect it and on their next visit after a deploy.
+- **Each user's database** (`prisma/user/schema.prisma`): their data: categories and subcategories (with budgets), expenses, and a single `Settings` row (preferences and dashboard widgets). A new database starts with the default categories (`lib/guava/default-categories.ts`). Not managed by `prisma migrate`. After editing the schema, run `pnpm user-db:migration <name>` to generate `lib/user-db/migrations/NNNN_<name>.ts`. guava applies pending migrations to a user's database when they connect it and on their next visit after a deploy. For steps SQL can't express well, such as seed data, write a code migration (`{ up(client) }`, see `0003_default_categories.ts`) in the same folder and add it to `index.ts`.
 
 ## Scripts
 

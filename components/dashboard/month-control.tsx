@@ -9,14 +9,8 @@ import {
   PopoverAnchor,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  addMonths,
-  compareMonths,
-  MAX_MONTH,
-  MIN_MONTH,
-  monthLabel,
-} from "@/lib/guava/dates";
-import { useSelectedMonth } from "@/lib/guava/store";
+import { addMonths, compareMonths, monthLabel } from "@/lib/guava/dates";
+import { useMonthBounds, useSelectedMonth } from "@/lib/guava/store";
 import { cn } from "@/lib/utils";
 
 import { SpendCalendarPopover } from "./spend-calendar-popover";
@@ -24,6 +18,7 @@ import { SpendCalendarPopover } from "./spend-calendar-popover";
 /** ‹ [📅 September 2026] › — steps the dashboard month; the middle opens the Spend Calendar. */
 export function MonthControl() {
   const [month, setMonth] = useSelectedMonth();
+  const bounds = useMonthBounds();
   const [open, setOpen] = useState(false);
 
   return (
@@ -33,7 +28,7 @@ export function MonthControl() {
           <StepButton
             label="Previous month"
             className="rounded-l-lg"
-            disabled={compareMonths(month, MIN_MONTH) <= 0}
+            disabled={compareMonths(month, bounds.min) <= 0}
             onClick={() => setMonth(addMonths(month, -1))}
           >
             <ChevronLeft />
@@ -50,7 +45,7 @@ export function MonthControl() {
           <StepButton
             label="Next month"
             className="rounded-r-lg"
-            disabled={compareMonths(month, MAX_MONTH) >= 0}
+            disabled={compareMonths(month, bounds.max) >= 0}
             onClick={() => setMonth(addMonths(month, 1))}
           >
             <ChevronRight />

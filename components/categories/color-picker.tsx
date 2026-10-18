@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORY_COLORS } from "@/lib/guava/sample-data";
+import { CATEGORY_COLORS } from "@/lib/guava/colors";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_CUSTOM = "#7c3aed";

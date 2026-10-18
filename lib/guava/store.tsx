@@ -2,46 +2,50 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   useReducer,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
-import { useLocalStorage } from "@/lib/use-local-storage";
-
-import { clampMonth, DEFAULT_MONTH } from "./dates";
+import { clampMonth, monthOf, toKey } from "./dates";
 import { heatThresholds, type HeatThresholds } from "./heat";
-import { generateSampleTxns, SAMPLE_CATEGORIES } from "./sample-data";
 import {
   categoryStats,
   dailyTotals,
+  firstMonth,
   monthlyTotals,
   reviewCount,
   type CategoryStat,
 } from "./selectors";
+import * as server from "./server/actions";
 import type {
   Cat,
   DateKey,
   DayTotal,
   Month,
   Settings,
+  Snapshot,
   Sub,
   Txn,
   Widget,
-  WidgetId,
 } from "./types";
 
-type State = {
-  txns: Txn[];
-  cats: Cat[];
+// The client-side copy of the user's data. Every change is applied here
+// first, so the UI updates instantly, and then persisted with a server
+// action. If saving fails, the store reloads everything from the database.
+
+type State = Snapshot & {
   /** The month the Dashboard and Categories pages show. */
   month: Month;
-  settings: Settings;
+  /** Set when a save failed; the data is then reloaded from the database. */
+  syncError: boolean;
 };
 
 /** A transaction to save. `id: null` creates a new one. */
-export type TxnDraft = Omit<Txn, "id"> & { id: number | null };
+export type TxnDraft = Omit<Txn, "id"> & { id: string | null };
 /** A category to save. `id: null` creates a new one (subs are kept on edit). */
 export type CatDraft = Omit<Cat, "id" | "subs"> & { id: string | null };
 /** A subcategory to save. `id: null` creates a new one. */
@@ -49,29 +53,30 @@ export type SubDraft = Omit<Sub, "id"> & { id: string | null };
 
 type Action =
   | { type: "setMonth"; month: Month }
-  | { type: "upsertTxn"; txn: TxnDraft }
-  | { type: "deleteTxn"; id: number }
-  | { type: "setReview"; ids: number[]; needsReview: boolean }
-  | { type: "upsertCat"; cat: CatDraft; newId: string }
+  | { type: "upsertTxn"; txn: Txn; isNew: boolean }
+  | { type: "deleteTxn"; id: string }
+  | { type: "setReview"; ids: string[]; needsReview: boolean }
+  | { type: "upsertCat"; cat: Omit<Cat, "subs">; isNew: boolean }
   | { type: "deleteCat"; id: string; moveTo: string | null }
-  | { type: "upsertSub"; catId: string; sub: SubDraft; newId: string }
+  | { type: "upsertSub"; catId: string; sub: Sub; isNew: boolean }
   | { type: "deleteSub"; catId: string; subId: string }
-  | { type: "toggleSetting"; key: keyof Settings };
+  | { type: "setSetting"; key: keyof Settings; value: boolean }
+  | { type: "setWidgets"; widgets: Widget[] }
+  | { type: "saveFailed" }
+  | { type: "reload"; snapshot: Snapshot }
+  | { type: "dismissSyncError" };
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
     case "setMonth":
-      return { ...s, month: clampMonth(a.month) };
-    case "upsertTxn": {
-      const { id, ...rec } = a.txn;
-      if (id != null)
-        return {
-          ...s,
-          txns: s.txns.map((t) => (t.id === id ? { ...t, ...rec } : t)),
-        };
-      const nextId = s.txns.reduce((m, t) => Math.max(m, t.id), 0) + 1;
-      return { ...s, txns: [{ id: nextId, ...rec }, ...s.txns] };
-    }
+      return { ...s, month: a.month };
+    case "upsertTxn":
+      return a.isNew
+        ? { ...s, txns: [a.txn, ...s.txns] }
+        : {
+            ...s,
+            txns: s.txns.map((t) => (t.id === a.txn.id ? a.txn : t)),
+          };
     case "deleteTxn":
       return { ...s, txns: s.txns.filter((t) => t.id !== a.id) };
     case "setReview": {
@@ -83,15 +88,15 @@ function reducer(s: State, a: Action): State {
         ),
       };
     }
-    case "upsertCat": {
-      const { id, ...rec } = a.cat;
-      if (id != null)
-        return {
-          ...s,
-          cats: s.cats.map((c) => (c.id === id ? { ...c, ...rec } : c)),
-        };
-      return { ...s, cats: [...s.cats, { id: a.newId, ...rec, subs: [] }] };
-    }
+    case "upsertCat":
+      return a.isNew
+        ? { ...s, cats: [...s.cats, { ...a.cat, subs: [] }] }
+        : {
+            ...s,
+            cats: s.cats.map((c) =>
+              c.id === a.cat.id ? { ...c, ...a.cat } : c,
+            ),
+          };
     case "deleteCat":
       return {
         ...s,
@@ -107,13 +112,11 @@ function reducer(s: State, a: Action): State {
         ...s,
         cats: s.cats.map((c) => {
           if (c.id !== a.catId) return c;
-          const { id, ...rec } = a.sub;
           return {
             ...c,
-            subs:
-              id != null
-                ? c.subs.map((x) => (x.id === id ? { ...x, ...rec } : x))
-                : [...c.subs, { id: a.newId, ...rec }],
+            subs: a.isNew
+              ? [...c.subs, a.sub]
+              : c.subs.map((x) => (x.id === a.sub.id ? a.sub : x)),
           };
         }),
       };
@@ -131,41 +134,102 @@ function reducer(s: State, a: Action): State {
             : t,
         ),
       };
-    case "toggleSetting":
-      return { ...s, settings: { ...s.settings, [a.key]: !s.settings[a.key] } };
+    case "setSetting":
+      return { ...s, settings: { ...s.settings, [a.key]: a.value } };
+    case "setWidgets":
+      return { ...s, widgets: a.widgets };
+    case "saveFailed":
+      return { ...s, syncError: true };
+    case "reload":
+      return { ...s, ...a.snapshot };
+    case "dismissSyncError":
+      return { ...s, syncError: false };
   }
 }
 
-function init(): State {
-  return {
-    txns: generateSampleTxns(),
-    cats: SAMPLE_CATEGORIES,
-    month: DEFAULT_MONTH,
-    settings: { autoBills: true, weekly: true, big: false },
-  };
-}
+const WIDGET_SAVE_DELAY_MS = 600;
 
 function makeActions(dispatch: React.Dispatch<Action>) {
-  const newId = (prefix: string) => `${prefix}${Date.now().toString(36)}`;
+  /** Persists a change; on failure, reloads the store from the database. */
+  const persist = (save: () => Promise<void>) => {
+    save().catch(async (error: unknown) => {
+      console.error("Failed to save change", error);
+      dispatch({ type: "saveFailed" });
+      try {
+        dispatch({ type: "reload", snapshot: await server.getSnapshot() });
+      } catch (reloadError) {
+        console.error("Failed to reload data", reloadError);
+      }
+    });
+  };
+  let widgetTimer: ReturnType<typeof setTimeout> | undefined;
+
   return {
     setMonth: (month: Month) => dispatch({ type: "setMonth", month }),
-    upsertTxn: (txn: TxnDraft) => dispatch({ type: "upsertTxn", txn }),
-    deleteTxn: (id: number) => dispatch({ type: "deleteTxn", id }),
+    upsertTxn: ({ id, ...input }: TxnDraft) => {
+      const isNew = id == null;
+      const txn = { id: id ?? crypto.randomUUID(), ...input };
+      dispatch({ type: "upsertTxn", txn, isNew });
+      persist(() =>
+        isNew
+          ? server.createExpense(txn.id, input)
+          : server.updateExpense(txn.id, input),
+      );
+    },
+    deleteTxn: (id: string) => {
+      dispatch({ type: "deleteTxn", id });
+      persist(() => server.deleteExpense(id));
+    },
     /** `needsReview: false` marks reviewed; `true` moves back to the review queue. */
-    setReview: (ids: number[], needsReview: boolean) =>
-      dispatch({ type: "setReview", ids, needsReview }),
-    upsertCat: (cat: CatDraft) =>
-      dispatch({ type: "upsertCat", cat, newId: newId("c") }),
+    setReview: (ids: string[], needsReview: boolean) => {
+      if (!ids.length) return;
+      dispatch({ type: "setReview", ids, needsReview });
+      persist(() => server.setExpensesReview(ids, needsReview));
+    },
+    upsertCat: ({ id, ...input }: CatDraft) => {
+      const isNew = id == null;
+      const cat = { id: id ?? crypto.randomUUID(), ...input };
+      dispatch({ type: "upsertCat", cat, isNew });
+      persist(() =>
+        isNew
+          ? server.createCategory(cat.id, input)
+          : server.updateCategory(cat.id, input),
+      );
+    },
     /** Deletes a category; its transactions move to `moveTo` and lose their subcategory. */
-    deleteCat: (id: string, moveTo: string | null) =>
-      dispatch({ type: "deleteCat", id, moveTo }),
-    upsertSub: (catId: string, sub: SubDraft) =>
-      dispatch({ type: "upsertSub", catId, sub, newId: newId("s") }),
+    deleteCat: (id: string, moveTo: string | null) => {
+      dispatch({ type: "deleteCat", id, moveTo });
+      persist(() => server.deleteCategory(id, moveTo));
+    },
+    upsertSub: (catId: string, { id, ...input }: SubDraft) => {
+      const isNew = id == null;
+      const sub = { id: id ?? crypto.randomUUID(), ...input };
+      dispatch({ type: "upsertSub", catId, sub, isNew });
+      persist(() =>
+        isNew
+          ? server.createSubcategory(catId, sub.id, input)
+          : server.updateSubcategory(catId, sub.id, input),
+      );
+    },
     /** Deletes a subcategory; its transactions keep the category but lose the subcategory. */
-    deleteSub: (catId: string, subId: string) =>
-      dispatch({ type: "deleteSub", catId, subId }),
-    toggleSetting: (key: keyof Settings) =>
-      dispatch({ type: "toggleSetting", key }),
+    deleteSub: (catId: string, subId: string) => {
+      dispatch({ type: "deleteSub", catId, subId });
+      persist(() => server.deleteSubcategory(catId, subId));
+    },
+    setSetting: (key: keyof Settings, value: boolean) => {
+      dispatch({ type: "setSetting", key, value });
+      persist(() => server.setSetting(key, value));
+    },
+    /** Saved after a short pause, so dragging to reorder sends one request. */
+    setWidgets: (widgets: Widget[]) => {
+      dispatch({ type: "setWidgets", widgets });
+      clearTimeout(widgetTimer);
+      widgetTimer = setTimeout(
+        () => persist(() => server.saveWidgets(widgets)),
+        WIDGET_SAVE_DELAY_MS,
+      );
+    },
+    dismissSyncError: () => dispatch({ type: "dismissSyncError" }),
   };
 }
 
@@ -176,16 +240,44 @@ type Derived = {
   thresholds: HeatThresholds;
   reviewCount: number;
   catById: Map<string, Cat>;
+  /** The earliest and latest months the month pickers allow. */
+  bounds: { min: Month; max: Month };
 };
 
 const GuavaContext = createContext<{
   state: State;
   actions: GuavaActions;
   derived: Derived;
+  today: DateKey;
 } | null>(null);
 
-export function GuavaProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, init);
+const noSubscribe = () => () => {};
+const localToday = () => toKey(new Date());
+
+/**
+ * `initial` is loaded on the server for the current user. `serverToday` is
+ * the server's date, used until hydration; after that "today" is the date
+ * in the browser's own time zone.
+ */
+export function GuavaProvider({
+  initial,
+  serverToday,
+  children,
+}: {
+  initial: Snapshot;
+  serverToday: DateKey;
+  children: ReactNode;
+}) {
+  const today = useSyncExternalStore(
+    noSubscribe,
+    localToday,
+    () => serverToday,
+  );
+  const [state, dispatch] = useReducer(reducer, undefined, (): State => ({
+    ...initial,
+    month: monthOf(serverToday),
+    syncError: false,
+  }));
   const actions = useMemo(() => makeActions(dispatch), []);
   const daily = useMemo(() => dailyTotals(state.txns), [state.txns]);
   const derived = useMemo<Derived>(
@@ -194,12 +286,13 @@ export function GuavaProvider({ children }: { children: ReactNode }) {
       thresholds: heatThresholds(daily),
       reviewCount: reviewCount(state.txns),
       catById: new Map(state.cats.map((c) => [c.id, c])),
+      bounds: { min: firstMonth(state.txns, today), max: monthOf(today) },
     }),
-    [daily, state.txns, state.cats],
+    [daily, state.txns, state.cats, today],
   );
   const value = useMemo(
-    () => ({ state, actions, derived }),
-    [state, actions, derived],
+    () => ({ state, actions, derived, today }),
+    [state, actions, derived, today],
   );
   return (
     <GuavaContext.Provider value={value}>{children}</GuavaContext.Provider>
@@ -229,9 +322,32 @@ export function useCatById(): Map<string, Cat> {
   return useGuava().derived.catById;
 }
 
-export function useSelectedMonth(): [Month, (m: Month) => void] {
+/** The current calendar date (YYYY-MM-DD) in the browser's time zone. */
+export function useToday(): DateKey {
+  return useGuava().today;
+}
+
+/** Whether a save failed, and a way to dismiss the notice. */
+export function useSyncError(): [boolean, () => void] {
   const { state, actions } = useGuava();
-  return [state.month, actions.setMonth];
+  return [state.syncError, actions.dismissSyncError];
+}
+
+/** The earliest and latest months the month pickers allow. */
+export function useMonthBounds(): { min: Month; max: Month } {
+  return useGuava().derived.bounds;
+}
+
+/** The dashboard month, kept within `useMonthBounds()`. */
+export function useSelectedMonth(): [Month, (m: Month) => void] {
+  const { state, actions, derived } = useGuava();
+  const { min, max } = derived.bounds;
+  const month = clampMonth(state.month, min, max);
+  const setMonth = useCallback(
+    (m: Month) => actions.setMonth(clampMonth(m, min, max)),
+    [actions, min, max],
+  );
+  return [month, setMonth];
 }
 
 export function useSettings(): Settings {
@@ -262,34 +378,23 @@ export function useCategoryStats(month?: Month): CategoryStat[] {
 }
 
 export function useMonthlyTotals() {
-  const txns = useTxns();
-  return useMemo(() => monthlyTotals(txns), [txns]);
+  const { state, derived, today } = useGuava();
+  const { txns } = state;
+  const { min } = derived.bounds;
+  return useMemo(() => monthlyTotals(txns, min, today), [txns, min, today]);
 }
 
-// ---- Dashboard widget layout (per browser for now; per user once auth lands)
-
-export const ALL_WIDGET_IDS: WidgetId[] = [
-  "cat",
-  "year",
-  "line",
-  "cal",
-  "share",
-];
-const NO_WIDGETS: Widget[] = [];
-const isWidgetList = (v: unknown): v is Widget[] =>
-  Array.isArray(v) &&
-  v.every(
-    (w) =>
-      w &&
-      typeof w === "object" &&
-      ALL_WIDGET_IDS.includes((w as Widget).id) &&
-      ((w as Widget).size === "half" || (w as Widget).size === "full"),
+/** The dashboard widget layout, saved to the user's settings. */
+export function useWidgets(): [
+  Widget[],
+  (next: Widget[] | ((prev: Widget[]) => Widget[])) => void,
+] {
+  const { state, actions } = useGuava();
+  const { widgets } = state;
+  const setWidgets = useCallback(
+    (next: Widget[] | ((prev: Widget[]) => Widget[])) =>
+      actions.setWidgets(typeof next === "function" ? next(widgets) : next),
+    [actions, widgets],
   );
-
-export function useWidgets() {
-  return useLocalStorage<Widget[]>(
-    "guava.widgets.v2",
-    NO_WIDGETS,
-    isWidgetList,
-  );
+  return [widgets, setWidgets];
 }
