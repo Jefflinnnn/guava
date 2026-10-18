@@ -5,7 +5,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+
+/** Thrown by `getCurrentUserId` when the request has no valid session. */
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Not signed in");
+    this.name = "UnauthorizedError";
+  }
+}
 
 /**
  * The Better Auth session for this request, or null. Cached per request, so
@@ -30,19 +37,19 @@ export async function requireUser() {
   return user;
 }
 
-const DEMO_USER_EMAIL = "demo@example.com";
-
 /**
- * TODO: switch to the session user once the login screens land.
- * Every Plaid route calls this, so swapping it in one place secures them all.
- * Until then, everything belongs to a single demo user.
+ * The signed-in user's id. Throws `UnauthorizedError` when there's no session.
+ * Every Plaid route calls this; catch it with `unauthorizedResponse`.
  */
 export async function getCurrentUserId(): Promise<string> {
-  const user = await prisma.user.upsert({
-    where: { email: DEMO_USER_EMAIL },
-    update: {},
-    create: { email: DEMO_USER_EMAIL, name: "Demo user" },
-    select: { id: true },
-  });
+  const user = await getCurrentUser();
+  if (!user) throw new UnauthorizedError();
   return user.id;
+}
+
+/** A 401 response if `error` is an `UnauthorizedError`, otherwise null. */
+export function unauthorizedResponse(error: unknown): Response | null {
+  return error instanceof UnauthorizedError
+    ? Response.json({ error: "Not signed in" }, { status: 401 })
+    : null;
 }
