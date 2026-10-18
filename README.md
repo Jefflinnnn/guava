@@ -48,18 +48,18 @@ migrations were committed), mark the baseline as applied first:
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000, create an account, and on the **Connect your bank** step (or in Settings) pick any institution and sign in with `user_good` / `pass_good`.
+Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000 and create an account. Step 2, **Bring your own keys**, asks for your own Plaid keys and Neon connection string and tests each one live; you can skip it and fill them in later on the **Integrations** page. Once your Plaid keys pass, use **Add a bank** there and sign in with `user_good` / `pass_good` in sandbox.
 
 ## Project layout
 
 ```
-prisma/schema.prisma          User, Session, Account, Verification (auth); PlaidItem, BankAccount
+prisma/schema.prisma          User, Session, Account, Verification (auth); IntegrationKeys; PlaidItem, BankAccount
 prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
 proxy.ts                      Redirects signed-out visitors to /login
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
-  (auth)/                     /login, /signup, /connect (onboarding step 2)
-  (app)/                      Dashboard, Expenses, Categories, Settings (signed in)
+  (auth)/                     /login, /signup, /connect (onboarding step 2: bring your own keys)
+  (app)/                      Dashboard, Expenses, Categories, Integrations, Settings (signed in)
   api/
     auth/[...all]/            Better Auth endpoints
     health/                   GET: database ping
@@ -68,6 +68,7 @@ app/
       exchange-public-token/  POST: step 3, saves the bank and its accounts
       webhook/                POST: Plaid webhook receiver (stub)
 components/
+  integrations/               Plaid + Neon key cards and Linked banks
   plaid-link-button.tsx       Client component that runs the Link flow
   ui/                         shadcn components (add more: pnpm dlx shadcn@latest add dialog)
 lib/
