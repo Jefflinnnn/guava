@@ -4,12 +4,6 @@ import type { Cat, Txn } from "./types";
 // Sample data ported from the design prototype: a seeded, deterministic run of
 // transactions from Jan 1 2024 to Oct 4 2026. Replace with real (Plaid) data.
 
-export const SAMPLE_USER = {
-  name: "Buzz P.",
-  email: "buzz@gatech.edu",
-  initials: "BP",
-};
-
 /** Preset category colors, in picker order (first 5 are also the defaults). */
 export const CATEGORY_COLORS = [
   "oklch(0.646 0.222 41.116)",

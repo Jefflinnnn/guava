@@ -47,15 +47,17 @@ migrations were committed), mark the baseline as applied first:
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
+Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000 and create an account (signed-out visitors go to `/login`). In **Settings**, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
 
 ## Project layout
 
 ```
 prisma/schema.prisma          User, Session, AuthAccount, Verification (auth); PlaidItem, Account (banks)
 prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
+proxy.ts                      Sends visitors without a session cookie to /login
 prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
 app/
+  (auth)/                     /login and /signup
   page.tsx                    Home: connected banks list + Link button
   api/
     auth/[...all]/            Better Auth endpoints

@@ -2,6 +2,7 @@
 
 import {
   LayoutDashboard,
+  LogOut,
   PanelLeft,
   Receipt,
   Settings,
@@ -16,7 +17,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { SAMPLE_USER } from "@/lib/guava/sample-data";
+import { logOut } from "@/lib/auth-actions";
+import { initialsOf } from "@/lib/guava/format";
 import { useReviewCount } from "@/lib/guava/store";
 import { useLocalStorage } from "@/lib/use-local-storage";
 import { cn } from "@/lib/utils";
@@ -25,13 +27,16 @@ import { NavItem } from "./nav-item";
 
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
 
-export function Sidebar() {
+export type SidebarUser = { name: string; email: string };
+
+export function Sidebar({ user }: { user: SidebarUser }) {
   const [collapsed, setCollapsed] = useLocalStorage(
     "guava.sidebarCollapsed",
     false,
     isBool,
   );
   const reviewCount = useReviewCount();
+  const displayName = user.name.trim() || user.email;
 
   return (
     <aside
@@ -99,20 +104,30 @@ export function Sidebar() {
       />
       <div className="mt-2 flex items-center gap-2.5 border-t px-1 pt-2">
         <InitialAvatar
-          name={SAMPLE_USER.name}
-          text={SAMPLE_USER.initials}
+          name={displayName}
+          text={initialsOf(displayName)}
           size={32}
           shape="circle"
         />
         {!collapsed && (
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-[13px] font-medium">
-              {SAMPLE_USER.name}
-            </span>
-            <span className="truncate text-xs text-ink-3">
-              {SAMPLE_USER.email}
-            </span>
-          </div>
+          <>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[13px] font-medium">
+                {displayName}
+              </span>
+              <span className="truncate text-xs text-ink-3">{user.email}</span>
+            </div>
+            <form action={logOut}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Log out"
+              >
+                <LogOut />
+              </Button>
+            </form>
+          </>
         )}
       </div>
     </aside>
