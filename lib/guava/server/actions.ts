@@ -5,7 +5,7 @@ import { getUserDb } from "@/lib/workspace";
 
 import { isCategoryColor } from "../colors";
 import { isDateKey } from "../dates";
-import { BUDGET_CAP_CENTS, EXPENSE_CAP_CENTS } from "../money-input";
+import { EXPENSE_CAP_CENTS } from "../money-input";
 import type { DateKey, Settings, Snapshot, Widget } from "../types";
 import { isWidgetList } from "../widgets";
 import { dateToDb, loadSnapshot } from "./snapshot";
@@ -133,7 +133,6 @@ export async function setExpensesReview(ids: string[], needsReview: boolean) {
 export type CategoryInput = {
   name: string;
   color: string;
-  budgetCents: number;
   locked: boolean;
 };
 
@@ -141,7 +140,6 @@ function categoryData(input: CategoryInput) {
   return {
     name: text(input?.name, 24, "name"),
     color: isCategoryColor(input.color) ? input.color : fail("Invalid color."),
-    budgetCents: cents(input.budgetCents, 0, BUDGET_CAP_CENTS),
     locked: bool(input.locked),
   };
 }
@@ -211,13 +209,10 @@ export async function deleteCategory(
 
 // ---- Subcategories
 
-export type SubcategoryInput = { name: string; budgetCents: number };
+export type SubcategoryInput = { name: string };
 
 function subcategoryData(input: SubcategoryInput) {
-  return {
-    name: text(input?.name, 24, "name"),
-    budgetCents: cents(input.budgetCents, 0, BUDGET_CAP_CENTS),
-  };
+  return { name: text(input?.name, 24, "name") };
 }
 
 async function assertCategory(db: UserDb, categoryId: string) {

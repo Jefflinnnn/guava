@@ -5,7 +5,6 @@ import { Lock } from "lucide-react";
 
 import { CharCountInput } from "@/components/guava/char-count-input";
 import { Field } from "@/components/guava/field";
-import { MoneyInput } from "@/components/guava/money-input";
 import { SwitchRow } from "@/components/guava/switch-row";
 import {
   Dialog,
@@ -14,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BUDGET_CAP_CENTS } from "@/lib/guava/money-input";
 import { CATEGORY_COLORS } from "@/lib/guava/colors";
 import { useActions, useCategories } from "@/lib/guava/store";
 
@@ -74,7 +72,6 @@ export function CategoryDialog({
 
 type CategoryDraft = {
   name: string;
-  budgetCents: number | null;
   color: string;
   locked: boolean;
 };
@@ -96,13 +93,11 @@ function CategoryForm({
     orig
       ? {
           name: orig.name,
-          budgetCents: orig.budgetCents || null,
           color: orig.color,
           locked: orig.locked,
         }
       : {
           name: "",
-          budgetCents: null,
           color: CATEGORY_COLORS[5],
           locked: false,
         },
@@ -130,7 +125,6 @@ function CategoryForm({
     upsertCat({
       id: orig?.id ?? null,
       name,
-      budgetCents: draft.budgetCents ?? 0,
       color: draft.color,
       locked: draft.locked,
     });
@@ -143,8 +137,8 @@ function CategoryForm({
         <DialogTitle>{orig ? "Edit category" : "New category"}</DialogTitle>
         <DialogDescription>
           {orig
-            ? "Rename, re-budget or recolor."
-            : "Group expenses and set a monthly budget."}
+            ? "Rename or recolor."
+            : "Group expenses to see where your money goes."}
         </DialogDescription>
       </DialogHeader>
 
@@ -170,13 +164,6 @@ function CategoryForm({
             setNameError("");
           }}
         />
-        <MoneyInput
-          label="Monthly budget"
-          valueCents={draft.budgetCents}
-          onChange={(budgetCents) => update({ budgetCents })}
-          capCents={BUDGET_CAP_CENTS}
-          hint="Type digits — cents fill in first. Up to $999,999.99."
-        />
         <Field label="Color">
           <ColorPicker
             value={draft.color}
@@ -189,7 +176,7 @@ function CategoryForm({
         bordered
         icon={<Lock />}
         title="Lock category"
-        description="Prevents renaming, budget changes and deletion."
+        description="Prevents renaming, recoloring and deletion."
         checked={draft.locked}
         onCheckedChange={(locked) => update({ locked })}
       />

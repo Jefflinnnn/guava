@@ -7,7 +7,7 @@ import { HoverCard } from "radix-ui";
 import { CategorySwatch } from "@/components/guava/category-swatch";
 import { ProgressBar } from "@/components/guava/progress-bar";
 import { Button } from "@/components/ui/button";
-import { money0Fit, plural } from "@/lib/guava/format";
+import { money0Fit, percent, plural } from "@/lib/guava/format";
 import type { CategoryStat } from "@/lib/guava/selectors";
 import { useCategoryStats, useUncategorizedStat } from "@/lib/guava/store";
 import type { WidgetSize } from "@/lib/guava/types";
@@ -20,7 +20,7 @@ const TOP_N = 5;
 /** Rows listed in the "+N more" hover card before it gives up and links out. */
 const MORE_MAX = 8;
 
-/** Top categories against their monthly budgets, with a hover list of the rest. */
+/** Top categories by spend this month, with a hover list of the rest. */
 export function CategorySpendWidget({ size }: { size: WidgetSize }) {
   const stats = useCategoryStats();
   const none = useUncategorizedStat();
@@ -31,7 +31,7 @@ export function CategorySpendWidget({ size }: { size: WidgetSize }) {
     <>
       <WidgetHeader
         title="Spending by category"
-        subtitle={`${stats.length > TOP_N ? `Top ${TOP_N} by spend` : "By spend"} · against monthly budgets`}
+        subtitle={`${stats.length > TOP_N ? `Top ${TOP_N} by spend` : "By spend"} · share of the month`}
         aside={
           <Button variant="outline" size="sm" asChild>
             <Link href="/categories">
@@ -50,10 +50,17 @@ export function CategorySpendWidget({ size }: { size: WidgetSize }) {
         )}
       >
         {top.map((s) => (
-          <CategoryBudgetRow key={s.cat.id} stat={s} />
+          <CategoryRow key={s.cat.id} stat={s} />
         ))}
         {none.spent > 0 && (
-          <UncategorizedRow spent={none.spent} count={none.count} />
+          <SpendRow {...UNCATEGORIZED} spent={none.spent} share={none.share}>
+            <Link
+              href="/expenses"
+              className="self-start text-xs text-ink-3 underline underline-offset-[3px] hover:text-foreground"
+            >
+              Categorize {plural(none.count, "expense")}
+            </Link>
+          </SpendRow>
         )}
         {rest.length > 0 && <MoreCategories stats={rest} />}
         {stats.length === 0 && none.spent === 0 && (
@@ -65,7 +72,7 @@ export function CategorySpendWidget({ size }: { size: WidgetSize }) {
             >
               Create one
             </Link>{" "}
-            to set a monthly budget.
+            to group your spending.
           </p>
         )}
       </div>
@@ -73,16 +80,24 @@ export function CategorySpendWidget({ size }: { size: WidgetSize }) {
   );
 }
 
-/** Swatch, name, `$spent / $budget` and a progress bar. */
-function CategoryBudgetRow({
-  stat,
+/** Swatch, name, `$spent` and `%` of the month, over a share-of-month bar. */
+function SpendRow({
+  name,
+  color,
+  spent,
+  share,
   dense = false,
+  children,
 }: {
-  stat: CategoryStat;
+  name: string;
+  color: string;
+  spent: number;
+  share: number;
   /** The smaller variant used inside the "+N more" hover card. */
   dense?: boolean;
+  /** Extra line under the bar. */
+  children?: React.ReactNode;
 }) {
-  const { cat, spent } = stat;
   return (
     <div
       className={cn(
@@ -96,47 +111,34 @@ function CategoryBudgetRow({
           dense && "text-[13px]",
         )}
       >
-        <CategorySwatch color={cat.color} />
-        <span className="min-w-0 flex-1 truncate font-medium">{cat.name}</span>
+        <CategorySwatch color={color} />
+        <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
         <span className="font-medium tabular">{money0Fit(spent, 8)}</span>
         <span
           className={cn(
             "text-right text-xs text-ink-3 tabular",
-            !dense && "w-16",
+            !dense && "w-10",
           )}
         >
-          / {money0Fit(cat.budgetCents, 8)}
+          {percent(share)}
         </span>
       </div>
-      <ProgressBar
-        value={spent}
-        max={cat.budgetCents}
-        color={cat.color}
-        height={dense ? 4 : 6}
-      />
+      <ProgressBar value={share} max={1} color={color} height={dense ? 4 : 6} />
+      {children}
     </div>
   );
 }
 
-/** Spend without a category: no budget, so a link to sort it instead of a bar. */
-function UncategorizedRow({ spent, count }: { spent: number; count: number }) {
+function CategoryRow({ stat, dense }: { stat: CategoryStat; dense?: boolean }) {
+  const { cat, spent, share } = stat;
   return (
-    <div className="flex flex-col gap-1.5 py-1.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <CategorySwatch color={UNCATEGORIZED.color} />
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {UNCATEGORIZED.name}
-        </span>
-        <span className="font-medium tabular">{money0Fit(spent, 8)}</span>
-        <span className="w-16 text-right text-xs text-ink-3">no budget</span>
-      </div>
-      <Link
-        href="/expenses"
-        className="self-start text-xs text-ink-3 underline underline-offset-[3px] hover:text-foreground"
-      >
-        Categorize {plural(count, "expense")}
-      </Link>
-    </div>
+    <SpendRow
+      name={cat.name}
+      color={cat.color}
+      spent={spent}
+      share={share}
+      dense={dense}
+    />
   );
 }
 
@@ -164,7 +166,7 @@ function MoreCategories({ stats }: { stats: CategoryStat[] }) {
         >
           <div className="flex max-h-[232px] flex-col overflow-y-auto">
             {shown.map((s) => (
-              <CategoryBudgetRow key={s.cat.id} stat={s} dense />
+              <CategoryRow key={s.cat.id} stat={s} dense />
             ))}
           </div>
           {hidden > 0 && (

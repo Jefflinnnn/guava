@@ -32,7 +32,7 @@ const BOTH = ["half", "full"] as const;
 export const WIDGETS: Record<WidgetId, WidgetDef> = {
   cat: {
     name: "Spending by category",
-    description: "Top categories against their monthly budgets.",
+    description: "Your top categories by spend this month.",
     icon: AlignLeft,
     sizes: BOTH,
     defaultSize: "half",

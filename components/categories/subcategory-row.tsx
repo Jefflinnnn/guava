@@ -4,10 +4,9 @@ import { Trash2 } from "lucide-react";
 
 import { ProgressBar } from "@/components/guava/progress-bar";
 import { Button } from "@/components/ui/button";
-import { money0Fit, plural } from "@/lib/guava/format";
+import { money0Fit, percent, plural } from "@/lib/guava/format";
 import type { SubStat } from "@/lib/guava/selectors";
 
-import { BudgetLeft } from "./budget-left";
 import { pressable } from "./pressable";
 
 const AMOUNT_CHARS = 7;
@@ -15,16 +14,19 @@ const AMOUNT_CHARS = 7;
 /** One subcategory in an expanded category card. Clicking it opens Edit. */
 export function SubcategoryRow({
   stat: { sub, spent, count },
+  categorySpent,
   color,
   onEdit,
   onDelete,
 }: {
   stat: SubStat;
+  /** The parent category's spend; the bar shows this subcategory's share of it. */
+  categorySpent: number;
   color: string;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const budget = sub.budgetCents;
+  const share = categorySpent ? spent / categorySpent : 0;
   return (
     <div
       {...pressable(onEdit)}
@@ -36,28 +38,17 @@ export function SubcategoryRow({
         <div className="text-xs text-ink-3">{plural(count, "transaction")}</div>
       </div>
       <ProgressBar
-        value={spent}
-        max={budget}
+        value={share}
+        max={1}
         color={color}
         height={4}
-        noBudget="empty"
         className="bg-border"
       />
       <div className="text-right">
         <div className="text-[13px] font-semibold whitespace-nowrap tabular">
-          {money0Fit(spent, AMOUNT_CHARS)}{" "}
-          <span className="font-normal text-ink-3">
-            / {budget ? money0Fit(budget, AMOUNT_CHARS) : "No budget"}
-          </span>
+          {money0Fit(spent, AMOUNT_CHARS)}
         </div>
-        {budget > 0 && (
-          <BudgetLeft
-            spent={spent}
-            budget={budget}
-            maxChars={AMOUNT_CHARS}
-            className="text-[11px]"
-          />
-        )}
+        <div className="text-[11px] text-ink-3 tabular">{percent(share)}</div>
       </div>
       <Button
         variant="ghost"

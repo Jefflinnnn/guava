@@ -73,6 +73,11 @@ export function formatCentsInput(cents: number | null): string {
   });
 }
 
+/** A 0–1 share as a whole percent: "27%". */
+export function percent(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
 export function plural(n: number, one: string, many = one + "s"): string {
   return `${n} ${n === 1 ? one : many}`;
 }
