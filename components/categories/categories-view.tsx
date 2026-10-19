@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Tag } from "lucide-react";
+import { ChevronRight, Plus, Tag } from "lucide-react";
+import Link from "next/link";
 
+import { CategorySwatch } from "@/components/guava/category-swatch";
 import { EmptyState } from "@/components/guava/empty-state";
 import { Page, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { monthLabel } from "@/lib/guava/dates";
-import { useCategoryStats, useSelectedMonth } from "@/lib/guava/store";
+import { money, plural } from "@/lib/guava/format";
+import {
+  useCategoryStats,
+  useSelectedMonth,
+  useUncategorizedStat,
+} from "@/lib/guava/store";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 
 import { CategoryCard } from "./category-card";
 import { CategoryDialog } from "./category-dialog";
@@ -22,8 +30,9 @@ const NO_SUB: SubTarget = { catId: null, subId: null };
 /** The Categories page: monthly budgets per category, with their subcategories. */
 export function CategoriesView() {
   const stats = useCategoryStats();
+  const none = useUncategorizedStat();
   const [month] = useSelectedMonth();
-  const [expanded, setExpanded] = useState<string[]>(["bills"]);
+  const [expanded, setExpanded] = useState<string[]>([]);
 
   const catDialog = useDialogTarget<string | null>(null);
   const catDelete = useDialogTarget<string | null>(null);
@@ -49,6 +58,24 @@ export function CategoriesView() {
           )
         }
       />
+
+      {none.count > 0 && (
+        <Link
+          href="/expenses"
+          className="mb-2.5 flex items-center gap-2.5 rounded-xl border border-dashed border-border-strong px-4 py-3 text-sm hover:bg-muted"
+        >
+          <CategorySwatch color={UNCATEGORIZED.color} />
+          <span className="min-w-0 flex-1 truncate">
+            <span className="font-medium">{UNCATEGORIZED.name}</span>
+            <span className="text-ink-3">
+              {" "}
+              · {plural(none.count, "expense")} without a category
+            </span>
+          </span>
+          <span className="font-medium tabular">{money(none.spent)}</span>
+          <ChevronRight className="size-4 text-ink-3" />
+        </Link>
+      )}
 
       {stats.length ? (
         <div className="flex flex-col gap-2.5">

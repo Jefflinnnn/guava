@@ -15,6 +15,7 @@ import {
   STATUS_FILTER_OPTIONS,
 } from "@/lib/guava/selectors";
 import type { Cat, Filters } from "@/lib/guava/types";
+import { UNCATEGORIZED, UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
 
 import { SEARCH_MAX } from "./layout";
@@ -200,10 +201,11 @@ export function CategoryFilter({
   value: string[];
   setFilters: SetFilters;
 }) {
+  const options = [...cats, { id: UNCATEGORIZED_KEY, ...UNCATEGORIZED }];
   return (
     <>
       <FilterHeading>Show categories</FilterHeading>
-      {cats.map((c) => (
+      {options.map((c) => (
         <CheckOption
           key={c.id}
           checked={value.includes(c.id)}

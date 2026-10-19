@@ -16,6 +16,7 @@ import type {
   Sub,
   Txn,
 } from "./types";
+import { UNCATEGORIZED_KEY } from "./uncategorized";
 
 // Pure derivations over the store. Hooks in store.tsx memoize these.
 
@@ -57,6 +58,8 @@ export type CategoryStat = {
   allocated: number;
 };
 
+export type UncategorizedStat = { spent: number; count: number; share: number };
+
 /** Per-category spend for one month, sorted by spend (highest first). */
 export function categoryStats(
   txns: Txn[],
@@ -90,6 +93,15 @@ export function categoryStats(
       };
     })
     .sort((a, b) => b.spent - a.spent);
+}
+
+/** Spend without a category for one month (not part of `categoryStats`). */
+export function uncategorizedStat(txns: Txn[], m: Month): UncategorizedStat {
+  const month = txnsInMonth(txns, m);
+  const total = sumCents(month);
+  const none = month.filter((t) => t.catId == null);
+  const spent = sumCents(none);
+  return { spent, count: none.length, share: total ? spent / total : 0 };
 }
 
 export type MonthTotal = {
@@ -195,7 +207,7 @@ export function filterTxns(
       (!q || t.name.toLowerCase().includes(q)) &&
       (isNaN(min) || t.amountCents >= min) &&
       (isNaN(max) || t.amountCents <= max) &&
-      (!f.cats.length || f.cats.includes(t.catId)) &&
+      (!f.cats.length || f.cats.includes(t.catId ?? UNCATEGORIZED_KEY)) &&
       (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`)),
   );
   return list.sort((a, b) => {

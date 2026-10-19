@@ -9,9 +9,6 @@ export const CATEGORY_COLORS = [
   "oklch(0.6 0.2 15)",
 ];
 
-/** A neutral grey for catch-all categories like "Other". */
-export const NEUTRAL_CATEGORY_COLOR = "oklch(0.705 0.015 286.067)";
-
 /** An oklch() preset or a #hex custom pick, as stored on a category. */
 export function isCategoryColor(v: unknown): v is string {
   return (

@@ -9,7 +9,8 @@ export type Txn = {
   date: DateKey;
   name: string;
   amountCents: number;
-  catId: string;
+  /** null = uncategorized (then `subId` is null and `needsReview` is true). */
+  catId: string | null;
   subId: string | null;
   needsReview: boolean;
   note: string;
@@ -40,6 +41,7 @@ export type Filters = {
   /** Dollar strings as typed in the filter boxes ("" = unset). */
   min: string;
   max: string;
+  /** Category ids, plus UNCATEGORIZED_KEY for expenses without one. */
   cats: string[];
   /** `${catId}/${subId}` keys. */
   subs: string[];

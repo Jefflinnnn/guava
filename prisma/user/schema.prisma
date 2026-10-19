@@ -39,7 +39,7 @@ model Category {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   subs        Subcategory[]
-  // Restrict: move a category's expenses elsewhere before deleting it.
+  // Deleting a category leaves its expenses uncategorized.
   expenses    Expense[]
 }
 
@@ -60,14 +60,15 @@ model Subcategory {
 
 // One spend, entered by hand for now. Bank imports (Plaid) add their own
 // columns later. Amounts are positive; refunds and income come later.
+// No category means uncategorized; those always need review.
 model Expense {
   id            String       @id @default(cuid())
   // A calendar day with no time zone, read and written as YYYY-MM-DD.
   date          DateTime     @db.Date
   name          String       @db.VarChar(40)
   amountCents   Int
-  categoryId    String
-  category      Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategoryId String?
   subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   needsReview   Boolean      @default(true)

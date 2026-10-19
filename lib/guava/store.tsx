@@ -18,7 +18,9 @@ import {
   firstMonth,
   monthlyTotals,
   reviewCount,
+  uncategorizedStat,
   type CategoryStat,
+  type UncategorizedStat,
 } from "./selectors";
 import * as server from "./server/actions";
 import type {
@@ -83,8 +85,11 @@ function reducer(s: State, a: Action): State {
       const ids = new Set(a.ids);
       return {
         ...s,
+        // Uncategorized expenses stay in review until they get a category.
         txns: s.txns.map((t) =>
-          ids.has(t.id) ? { ...t, needsReview: a.needsReview } : t,
+          ids.has(t.id) && t.catId != null
+            ? { ...t, needsReview: a.needsReview }
+            : t,
         ),
       };
     }
@@ -101,11 +106,13 @@ function reducer(s: State, a: Action): State {
       return {
         ...s,
         cats: s.cats.filter((c) => c.id !== a.id),
-        txns: a.moveTo
-          ? s.txns.map((t) =>
-              t.catId === a.id ? { ...t, catId: a.moveTo!, subId: null } : t,
-            )
-          : s.txns,
+        txns: s.txns.map((t) =>
+          t.catId !== a.id
+            ? t
+            : a.moveTo
+              ? { ...t, catId: a.moveTo, subId: null }
+              : { ...t, catId: null, subId: null, needsReview: true },
+        ),
       };
     case "upsertSub":
       return {
@@ -166,8 +173,12 @@ function makeActions(dispatch: React.Dispatch<Action>) {
 
   return {
     setMonth: (month: Month) => dispatch({ type: "setMonth", month }),
-    upsertTxn: ({ id, ...input }: TxnDraft) => {
+    upsertTxn: ({ id, ...draft }: TxnDraft) => {
       const isNew = id == null;
+      const input =
+        draft.catId == null
+          ? { ...draft, subId: null, needsReview: true }
+          : draft;
       const txn = { id: id ?? crypto.randomUUID(), ...input };
       dispatch({ type: "upsertTxn", txn, isNew });
       persist(() =>
@@ -186,7 +197,8 @@ function makeActions(dispatch: React.Dispatch<Action>) {
       dispatch({ type: "setReview", ids, needsReview });
       persist(() => server.setExpensesReview(ids, needsReview));
     },
-    upsertCat: ({ id, ...input }: CatDraft) => {
+    /** Returns the category's id (new ones get one here). */
+    upsertCat: ({ id, ...input }: CatDraft): string => {
       const isNew = id == null;
       const cat = { id: id ?? crypto.randomUUID(), ...input };
       dispatch({ type: "upsertCat", cat, isNew });
@@ -195,8 +207,12 @@ function makeActions(dispatch: React.Dispatch<Action>) {
           ? server.createCategory(cat.id, input)
           : server.updateCategory(cat.id, input),
       );
+      return cat.id;
     },
-    /** Deletes a category; its transactions move to `moveTo` and lose their subcategory. */
+    /**
+     * Deletes a category. Its transactions move to `moveTo` and lose their
+     * subcategory; without `moveTo` they become uncategorized.
+     */
     deleteCat: (id: string, moveTo: string | null) => {
       dispatch({ type: "deleteCat", id, moveTo });
       persist(() => server.deleteCategory(id, moveTo));
@@ -375,6 +391,13 @@ export function useCategoryStats(month?: Month): CategoryStat[] {
     () => categoryStats(state.txns, state.cats, m),
     [state.txns, state.cats, m],
   );
+}
+
+/** Spend without a category for `month` (defaults to the selected month). */
+export function useUncategorizedStat(month?: Month): UncategorizedStat {
+  const { state } = useGuava();
+  const m = month ?? state.month;
+  return useMemo(() => uncategorizedStat(state.txns, m), [state.txns, m]);
 }
 
 export function useMonthlyTotals() {

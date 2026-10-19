@@ -11,6 +11,7 @@ import {
 } from "@/lib/guava/selectors";
 import { useActions, useToday, useTxns } from "@/lib/guava/store";
 import type { Filters, Sort, SortKey } from "@/lib/guava/types";
+import { UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
 import { DEFAULT_SORT_DIR, REVIEWED_PAGE_SIZE } from "./layout";
 
@@ -31,9 +32,11 @@ export function useExpensesView() {
   const { review, reviewed, catCounts } = useMemo(() => {
     const list = filterTxns(txns, filters, sort, today);
     const catCounts = new Map<string, number>();
-    for (const t of txns)
-      if (matchesDate(t, filters.date, today))
-        catCounts.set(t.catId, (catCounts.get(t.catId) ?? 0) + 1);
+    for (const t of txns) {
+      if (!matchesDate(t, filters.date, today)) continue;
+      const key = t.catId ?? UNCATEGORIZED_KEY;
+      catCounts.set(key, (catCounts.get(key) ?? 0) + 1);
+    }
     return {
       review: list.filter((t) => t.needsReview),
       reviewed: list.filter((t) => !t.needsReview),

@@ -6,7 +6,7 @@ import { Chip } from "@/components/guava/chip";
 import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { plural } from "@/lib/guava/format";
 import { useActions, useCategories, useTxns } from "@/lib/guava/store";
-import type { Cat } from "@/lib/guava/types";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 
 import { useRetained } from "./use-retained";
 
@@ -17,21 +17,12 @@ type DeleteCategoryDialogProps = {
 };
 
 /**
- * "Are you sure?" for a category. Its expenses move to a destination chosen
- * with chips (defaults to "Other", else the first category).
+ * "Are you sure?" for a category. Its expenses become uncategorized, or move
+ * to another category chosen with chips.
  */
 export function DeleteCategoryDialog(props: DeleteCategoryDialogProps) {
   // Re-keying resets the chosen destination for each category.
   return <DeleteCategoryConfirm key={props.categoryId ?? ""} {...props} />;
-}
-
-function defaultDestination(others: Cat[]): string | null {
-  return (
-    others.find((c) => c.id === "other" || c.name.toLowerCase() === "other")
-      ?.id ??
-    others[0]?.id ??
-    null
-  );
 }
 
 function DeleteCategoryConfirm({
@@ -54,13 +45,11 @@ function DeleteCategoryConfirm({
   }, [cats, txns, categoryId]);
   const shown = useRetained(info);
 
-  const [moveTo, setMoveTo] = useState(() =>
-    info ? defaultDestination(info.others) : null,
-  );
+  // null = leave them uncategorized.
+  const [moveTo, setMoveTo] = useState<string | null>(null);
 
   if (!shown) return null;
   const { cat, used, others } = shown;
-  const canMove = used > 0 && others.length > 0;
 
   return (
     <ConfirmDeleteDialog
@@ -71,20 +60,24 @@ function DeleteCategoryConfirm({
           “{cat.name}” and its subcategories will be permanently deleted.{" "}
           {used === 0
             ? "No expenses use it."
-            : others.length
-              ? `Its ${plural(used, "expense")} will move to:`
-              : `It’s your only category and ${plural(used, "expense")} use it — create another category first.`}
+            : `Its ${plural(used, "expense")} will move to:`}
         </>
       }
       confirmLabel="Delete category"
-      confirmDisabled={used > 0 && (!others.length || !moveTo)}
       onConfirm={() => {
         onOpenChange(false);
         deleteCat(cat.id, used ? moveTo : null);
       }}
     >
-      {canMove && (
+      {used > 0 && (
         <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+          <Chip
+            color={UNCATEGORIZED.color}
+            selected={moveTo == null}
+            onClick={() => setMoveTo(null)}
+          >
+            {UNCATEGORIZED.name}
+          </Chip>
           {others.map((c) => (
             <Chip
               key={c.id}

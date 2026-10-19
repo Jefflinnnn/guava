@@ -55,33 +55,41 @@ export type ExpenseInput = {
   date: DateKey;
   name: string;
   amountCents: number;
-  catId: string;
+  /** null = uncategorized. */
+  catId: string | null;
   subId: string | null;
   needsReview: boolean;
   note: string;
 };
 
-/** Validates an expense and checks its category (and subcategory) exist. */
+/**
+ * Validates an expense and checks its category (and subcategory) exist. An
+ * uncategorized expense has no subcategory and always needs review.
+ */
 async function expenseData(db: UserDb, input: ExpenseInput) {
   const date = isDateKey(input?.date) ? input.date : fail("Invalid date.");
   const note = typeof input.note === "string" ? input.note.trim() : "";
   if (note.length > 200) fail("Invalid note.");
-  const categoryId = id(input.catId);
+  const categoryId = input.catId == null ? null : id(input.catId);
   const subcategoryId = input.subId == null ? null : id(input.subId);
-  const cat = await db.category.findUnique({
-    where: { id: categoryId },
-    select: { subs: { select: { id: true } } },
-  });
-  if (!cat) fail("Category not found.");
-  if (subcategoryId && !cat.subs.some((s) => s.id === subcategoryId))
-    fail("Subcategory not found.");
+  if (categoryId) {
+    const cat = await db.category.findUnique({
+      where: { id: categoryId },
+      select: { subs: { select: { id: true } } },
+    });
+    if (!cat) fail("Category not found.");
+    if (subcategoryId && !cat.subs.some((s) => s.id === subcategoryId))
+      fail("Subcategory not found.");
+  } else if (subcategoryId) {
+    fail("Subcategory needs a category.");
+  }
   return {
     date: dateToDb(date),
     name: text(input.name, 40, "name"),
     amountCents: cents(input.amountCents, 1, EXPENSE_CAP_CENTS),
     categoryId,
     subcategoryId,
-    needsReview: bool(input.needsReview),
+    needsReview: bool(input.needsReview) || !categoryId,
     note,
   };
 }
@@ -110,9 +118,13 @@ export async function deleteExpense(expenseId: string) {
 export async function setExpensesReview(ids: string[], needsReview: boolean) {
   const db = await getUserDb();
   if (!Array.isArray(ids) || ids.length > 10_000) fail("Invalid ids.");
+  // Uncategorized expenses stay in review until they get a category.
   await db.expense.updateMany({
-    where: { id: { in: ids.map(id) } },
-    data: { needsReview: bool(needsReview) },
+    where: {
+      id: { in: ids.map(id) },
+      ...(bool(needsReview) ? {} : { categoryId: { not: null } }),
+    },
+    data: { needsReview },
   });
 }
 
@@ -162,8 +174,8 @@ export async function updateCategory(categoryId: string, input: CategoryInput) {
 
 /**
  * Deletes a category and its subcategories. Its expenses move to `moveTo`
- * (losing their subcategory); without `moveTo`, the database refuses the
- * delete if any expenses still use the category.
+ * (losing their subcategory); without `moveTo` they become uncategorized and
+ * go back to review.
  */
 export async function deleteCategory(
   categoryId: string,
@@ -186,6 +198,11 @@ export async function deleteCategory(
       await tx.expense.updateMany({
         where: { categoryId },
         data: { categoryId: target.id, subcategoryId: null },
+      });
+    } else {
+      await tx.expense.updateMany({
+        where: { categoryId },
+        data: { categoryId: null, subcategoryId: null, needsReview: true },
       });
     }
     await tx.category.delete({ where: { id: categoryId } });

@@ -9,13 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import type { Cat, Txn } from "@/lib/guava/types";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
 
 import { EXPENSE_GRID } from "./layout";
 
 export type ExpenseRowVariant = "review" | "reviewed";
-
-const UNCATEGORIZED = { name: "Uncategorized", color: "var(--faint)" };
 
 /**
  * One expense in the table. `review` rows are bold with a pink left bar and a
@@ -42,6 +41,12 @@ export function ExpenseRow({
   const review = variant === "review";
   const { name: catName, color } = cat ?? UNCATEGORIZED;
   const sub = txn.subId ? cat?.subs.find((s) => s.id === txn.subId) : null;
+  // Uncategorized expenses can't be marked reviewed until they get a category.
+  const toggleLabel = !review
+    ? "Move back to Needs review"
+    : cat
+      ? "Mark reviewed"
+      : "Pick a category to mark it reviewed";
 
   return (
     <div
@@ -120,8 +125,9 @@ export function ExpenseRow({
       <Button
         variant={review ? "outline" : "ghost"}
         size="icon-sm"
-        title={review ? "Mark reviewed" : "Move back to Needs review"}
-        aria-label={review ? "Mark reviewed" : "Move back to Needs review"}
+        title={toggleLabel}
+        aria-label={toggleLabel}
+        disabled={review && !cat}
         onClick={(e) => {
           e.stopPropagation();
           onToggleReview();

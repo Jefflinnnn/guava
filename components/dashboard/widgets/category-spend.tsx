@@ -9,8 +9,9 @@ import { ProgressBar } from "@/components/guava/progress-bar";
 import { Button } from "@/components/ui/button";
 import { money0Fit, plural } from "@/lib/guava/format";
 import type { CategoryStat } from "@/lib/guava/selectors";
-import { useCategoryStats } from "@/lib/guava/store";
+import { useCategoryStats, useUncategorizedStat } from "@/lib/guava/store";
 import type { WidgetSize } from "@/lib/guava/types";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
 
 import { WidgetHeader } from "./widget-header";
@@ -22,6 +23,7 @@ const MORE_MAX = 8;
 /** Top categories against their monthly budgets, with a hover list of the rest. */
 export function CategorySpendWidget({ size }: { size: WidgetSize }) {
   const stats = useCategoryStats();
+  const none = useUncategorizedStat();
   const top = stats.slice(0, TOP_N);
   const rest = stats.slice(TOP_N);
 
@@ -50,7 +52,22 @@ export function CategorySpendWidget({ size }: { size: WidgetSize }) {
         {top.map((s) => (
           <CategoryBudgetRow key={s.cat.id} stat={s} />
         ))}
+        {none.spent > 0 && (
+          <UncategorizedRow spent={none.spent} count={none.count} />
+        )}
         {rest.length > 0 && <MoreCategories stats={rest} />}
+        {stats.length === 0 && none.spent === 0 && (
+          <p className="py-1.5 text-[13px] text-ink-3">
+            No categories yet.{" "}
+            <Link
+              href="/categories"
+              className="font-medium text-primary-text underline underline-offset-[3px]"
+            >
+              Create one
+            </Link>{" "}
+            to set a monthly budget.
+          </p>
+        )}
       </div>
     </>
   );
@@ -97,6 +114,28 @@ function CategoryBudgetRow({
         color={cat.color}
         height={dense ? 4 : 6}
       />
+    </div>
+  );
+}
+
+/** Spend without a category: no budget, so a link to sort it instead of a bar. */
+function UncategorizedRow({ spent, count }: { spent: number; count: number }) {
+  return (
+    <div className="flex flex-col gap-1.5 py-1.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <CategorySwatch color={UNCATEGORIZED.color} />
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {UNCATEGORIZED.name}
+        </span>
+        <span className="font-medium tabular">{money0Fit(spent, 8)}</span>
+        <span className="w-16 text-right text-xs text-ink-3">no budget</span>
+      </div>
+      <Link
+        href="/expenses"
+        className="self-start text-xs text-ink-3 underline underline-offset-[3px] hover:text-foreground"
+      >
+        Categorize {plural(count, "expense")}
+      </Link>
     </div>
   );
 }
