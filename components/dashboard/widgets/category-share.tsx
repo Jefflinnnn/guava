@@ -3,21 +3,33 @@
 import { CategorySwatch } from "@/components/guava/category-swatch";
 import { monthLabel } from "@/lib/guava/dates";
 import { money0Fit } from "@/lib/guava/format";
-import type { CategoryStat } from "@/lib/guava/selectors";
-import { useCategoryStats, useSelectedMonth } from "@/lib/guava/store";
+import {
+  useCategoryStats,
+  useSelectedMonth,
+  useUncategorizedStat,
+} from "@/lib/guava/store";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 
 import { WidgetHeader } from "./widget-header";
 
+type Slice = {
+  key: string;
+  name: string;
+  color: string;
+  spent: number;
+  share: number;
+};
+
 /** `conic-gradient` stops, one slice per category with spend. */
-function donutBackground(stats: CategoryStat[], total: number): string {
+function donutBackground(slices: Slice[], total: number): string {
   if (!total) return "var(--muted)";
   let acc = 0;
-  const stops = stats
+  const stops = slices
     .filter((s) => s.spent > 0)
     .map((s) => {
       const from = acc;
       acc += (s.spent / total) * 100;
-      return `${s.cat.color} ${from}% ${acc}%`;
+      return `${s.color} ${from}% ${acc}%`;
     });
   return `conic-gradient(${stops.join(", ")})`;
 }
@@ -26,7 +38,17 @@ function donutBackground(stats: CategoryStat[], total: number): string {
 export function CategoryShareWidget() {
   const [month] = useSelectedMonth();
   const stats = useCategoryStats();
-  const total = stats.reduce((a, s) => a + s.spent, 0);
+  const none = useUncategorizedStat();
+  // Uncategorized spend is its own grey slice, listed last.
+  const slices: Slice[] = stats.map((s) => ({
+    key: s.cat.id,
+    name: s.cat.name,
+    color: s.cat.color,
+    spent: s.spent,
+    share: s.share,
+  }));
+  if (none.spent > 0) slices.push({ key: "none", ...UNCATEGORIZED, ...none });
+  const total = slices.reduce((a, s) => a + s.spent, 0);
 
   return (
     <>
@@ -34,7 +56,7 @@ export function CategoryShareWidget() {
       <div className="mt-5 flex flex-wrap items-center gap-6">
         <div
           className="flex size-[168px] flex-none items-center justify-center rounded-full"
-          style={{ background: donutBackground(stats, total) }}
+          style={{ background: donutBackground(slices, total) }}
         >
           <div className="flex size-[108px] flex-col items-center justify-center rounded-full bg-card">
             <span className="text-lg font-semibold tracking-[-0.02em] tabular">
@@ -44,11 +66,11 @@ export function CategoryShareWidget() {
           </div>
         </div>
         <ul className="flex min-w-[140px] flex-1 flex-col gap-2">
-          {stats.map((s) => (
-            <li key={s.cat.id} className="flex items-center gap-2 text-[13px]">
-              <CategorySwatch color={s.cat.color} size={10} />
+          {slices.map((s) => (
+            <li key={s.key} className="flex items-center gap-2 text-[13px]">
+              <CategorySwatch color={s.color} size={10} />
               <span className="min-w-0 flex-1 truncate text-ink-2">
-                {s.cat.name}
+                {s.name}
               </span>
               <span className="font-mono text-xs">
                 {(s.share * 100).toFixed(0)}%

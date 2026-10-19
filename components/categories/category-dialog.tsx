@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BUDGET_CAP_CENTS } from "@/lib/guava/money-input";
-import { CATEGORY_COLORS } from "@/lib/guava/sample-data";
+import { CATEGORY_COLORS } from "@/lib/guava/colors";
 import { useActions, useCategories } from "@/lib/guava/store";
 
 import { ColorPicker } from "./color-picker";

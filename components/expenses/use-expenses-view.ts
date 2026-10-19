@@ -9,8 +9,9 @@ import {
   filterTxns,
   matchesDate,
 } from "@/lib/guava/selectors";
-import { useActions, useTxns } from "@/lib/guava/store";
+import { useActions, useToday, useTxns } from "@/lib/guava/store";
 import type { Filters, Sort, SortKey } from "@/lib/guava/types";
+import { UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
 import { DEFAULT_SORT_DIR, REVIEWED_PAGE_SIZE } from "./layout";
 
@@ -21,24 +22,27 @@ import { DEFAULT_SORT_DIR, REVIEWED_PAGE_SIZE } from "./layout";
 export function useExpensesView() {
   const txns = useTxns();
   const { setReview } = useActions();
+  const today = useToday();
 
   const [filters, setFiltersState] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
-  const [selection, setSelection] = useState<number[]>([]);
+  const [selection, setSelection] = useState<string[]>([]);
   const [reviewedLimit, setReviewedLimit] = useState(REVIEWED_PAGE_SIZE);
 
   const { review, reviewed, catCounts } = useMemo(() => {
-    const list = filterTxns(txns, filters, sort);
+    const list = filterTxns(txns, filters, sort, today);
     const catCounts = new Map<string, number>();
-    for (const t of txns)
-      if (matchesDate(t, filters.date))
-        catCounts.set(t.catId, (catCounts.get(t.catId) ?? 0) + 1);
+    for (const t of txns) {
+      if (!matchesDate(t, filters.date, today)) continue;
+      const key = t.catId ?? UNCATEGORIZED_KEY;
+      catCounts.set(key, (catCounts.get(key) ?? 0) + 1);
+    }
     return {
       review: list.filter((t) => t.needsReview),
       reviewed: list.filter((t) => !t.needsReview),
       catCounts,
     };
-  }, [txns, filters, sort]);
+  }, [txns, filters, sort, today]);
 
   const showReview = filters.status !== "reviewed";
   const showReviewed = filters.status !== "review";
@@ -89,7 +93,7 @@ export function useExpensesView() {
     showMoreReviewed() {
       setReviewedLimit((n) => n + REVIEWED_PAGE_SIZE);
     },
-    toggleSelected(id: number, on: boolean) {
+    toggleSelected(id: string, on: boolean) {
       setSelection((s) =>
         on ? [...s.filter((x) => x !== id), id] : s.filter((x) => x !== id),
       );
@@ -101,7 +105,7 @@ export function useExpensesView() {
       setSelection([]);
     },
     /** Moves rows between the sections; always clears the selection. */
-    setNeedsReview(ids: number[], needsReview: boolean) {
+    setNeedsReview(ids: string[], needsReview: boolean) {
       setReview(ids, needsReview);
       setSelection([]);
     },

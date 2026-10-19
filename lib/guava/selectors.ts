@@ -2,11 +2,8 @@ import {
   addDays,
   fromMonthIndex,
   isInMonth,
-  MAX_MONTH,
-  MIN_MONTH,
   monthIndex,
   monthOf,
-  TODAY,
 } from "./dates";
 import { filterAmountToCents } from "./money-input";
 import type {
@@ -19,6 +16,7 @@ import type {
   Sub,
   Txn,
 } from "./types";
+import { UNCATEGORIZED_KEY } from "./uncategorized";
 
 // Pure derivations over the store. Hooks in store.tsx memoize these.
 
@@ -60,6 +58,8 @@ export type CategoryStat = {
   allocated: number;
 };
 
+export type UncategorizedStat = { spent: number; count: number; share: number };
+
 /** Per-category spend for one month, sorted by spend (highest first). */
 export function categoryStats(
   txns: Txn[],
@@ -95,22 +95,46 @@ export function categoryStats(
     .sort((a, b) => b.spent - a.spent);
 }
 
+/** Spend without a category for one month (not part of `categoryStats`). */
+export function uncategorizedStat(txns: Txn[], m: Month): UncategorizedStat {
+  const month = txnsInMonth(txns, m);
+  const total = sumCents(month);
+  const none = month.filter((t) => t.catId == null);
+  const spent = sumCents(none);
+  return { spent, count: none.length, share: total ? spent / total : 0 };
+}
+
 export type MonthTotal = {
   month: Month;
   total: number;
   /** the current, unfinished month */ partial: boolean;
 };
 
-/** One entry per month from MIN_MONTH to MAX_MONTH. */
-export function monthlyTotals(txns: Txn[]): MonthTotal[] {
+/** The earliest month with an expense, or `today`'s month when there are none. */
+export function firstMonth(txns: Txn[], today: DateKey): Month {
+  let first = today;
+  for (const t of txns) if (t.date < first) first = t.date;
+  return monthOf(first);
+}
+
+/**
+ * One entry per month from `from` through `today`'s month, always covering at
+ * least the last 12 months so the chart has a full window.
+ */
+export function monthlyTotals(
+  txns: Txn[],
+  from: Month,
+  today: DateKey,
+): MonthTotal[] {
   const byMonth = new Map<number, number>();
   for (const t of txns) {
+    if (t.date > today) continue;
     const k = monthIndex(monthOf(t.date));
     byMonth.set(k, (byMonth.get(k) ?? 0) + t.amountCents);
   }
-  const current = monthIndex(monthOf(TODAY));
+  const current = monthIndex(monthOf(today));
   const out: MonthTotal[] = [];
-  for (let k = monthIndex(MIN_MONTH); k <= monthIndex(MAX_MONTH); k++) {
+  for (let k = Math.min(monthIndex(from), current - 11); k <= current; k++) {
     out.push({
       month: fromMonthIndex(k),
       total: byMonth.get(k) ?? 0,
@@ -156,31 +180,40 @@ export const STATUS_FILTER_OPTIONS: [Filters["status"], string][] = [
   ["reviewed", "Reviewed"],
 ];
 
-export function matchesDate(t: Txn, f: Filters["date"]): boolean {
+export function matchesDate(
+  t: Txn,
+  f: Filters["date"],
+  today: DateKey,
+): boolean {
   if (f === "all") return true;
-  if (f === "month") return isInMonth(t.date, monthOf(TODAY));
+  if (f === "month") return isInMonth(t.date, monthOf(today));
   const days = { "7d": 7, "30d": 30, "90d": 90 }[f];
-  return t.date >= addDays(TODAY, -days + 1);
+  return t.date >= addDays(today, -days + 1);
 }
 
 /** Applies every filter except status (sections split on that), then sorts. */
-export function filterTxns(txns: Txn[], f: Filters, sort: Sort): Txn[] {
+export function filterTxns(
+  txns: Txn[],
+  f: Filters,
+  sort: Sort,
+  today: DateKey,
+): Txn[] {
   const q = f.q.trim().toLowerCase();
   const min = filterAmountToCents(f.min);
   const max = filterAmountToCents(f.max);
   const list = txns.filter(
     (t) =>
-      matchesDate(t, f.date) &&
+      matchesDate(t, f.date, today) &&
       (!q || t.name.toLowerCase().includes(q)) &&
       (isNaN(min) || t.amountCents >= min) &&
       (isNaN(max) || t.amountCents <= max) &&
-      (!f.cats.length || f.cats.includes(t.catId)) &&
+      (!f.cats.length || f.cats.includes(t.catId ?? UNCATEGORIZED_KEY)) &&
       (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`)),
   );
   return list.sort((a, b) => {
     const v =
       sort.key === "date"
-        ? a.date.localeCompare(b.date) || a.id - b.id
+        ? a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
         : sort.key === "amount"
           ? a.amountCents - b.amountCents
           : a.name.localeCompare(b.name);

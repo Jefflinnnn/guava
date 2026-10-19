@@ -5,11 +5,12 @@ export type DateKey = string;
 export type Month = { year: number; month: number };
 
 export type Txn = {
-  id: number;
+  id: string;
   date: DateKey;
   name: string;
   amountCents: number;
-  catId: string;
+  /** null = uncategorized (then `subId` is null and `needsReview` is true). */
+  catId: string | null;
   subId: string | null;
   needsReview: boolean;
   note: string;
@@ -40,6 +41,7 @@ export type Filters = {
   /** Dollar strings as typed in the filter boxes ("" = unset). */
   min: string;
   max: string;
+  /** Category ids, plus UNCATEGORIZED_KEY for expenses without one. */
   cats: string[];
   /** `${catId}/${subId}` keys. */
   subs: string[];
@@ -56,3 +58,11 @@ export type Settings = {
 };
 
 export type DayTotal = { sum: number; n: number };
+
+/** Everything the app loads from the user's database on first render. */
+export type Snapshot = {
+  txns: Txn[];
+  cats: Cat[];
+  settings: Settings;
+  widgets: Widget[];
+};

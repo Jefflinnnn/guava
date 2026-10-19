@@ -25,3 +25,59 @@ model Settings {
   widgets             Json     @default("[]")
   updatedAt           DateTime @updatedAt
 }
+
+// A spending category with a monthly budget.
+model Category {
+  id          String        @id @default(cuid())
+  name        String        @unique @db.VarChar(24)
+  // Any CSS color: an oklch() preset or a #hex custom pick.
+  color       String        @db.VarChar(64)
+  budgetCents Int           @default(0)
+  // Locked categories can't be edited or deleted until unlocked.
+  locked      Boolean       @default(false)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  subs        Subcategory[]
+  // Deleting a category leaves its expenses uncategorized.
+  expenses    Expense[]
+}
+
+model Subcategory {
+  id          String    @id @default(cuid())
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String    @db.VarChar(24)
+  budgetCents Int       @default(0)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expenses    Expense[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}
+
+// One spend, entered by hand for now. Bank imports (Plaid) add their own
+// columns later. Amounts are positive; refunds and income come later.
+// No category means uncategorized; those always need review.
+model Expense {
+  id            String       @id @default(cuid())
+  // A calendar day with no time zone, read and written as YYYY-MM-DD.
+  date          DateTime     @db.Date
+  name          String       @db.VarChar(40)
+  amountCents   Int
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  needsReview   Boolean      @default(true)
+  note          String       @default("") @db.VarChar(200)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([date])
+  @@index([needsReview])
+  @@index([categoryId])
+  @@index([subcategoryId])
+}

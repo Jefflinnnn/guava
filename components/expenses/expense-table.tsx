@@ -37,7 +37,7 @@ export function ExpenseTable({
       <ExpenseRow
         key={t.id}
         txn={t}
-        cat={catById.get(t.catId)}
+        cat={t.catId ? catById.get(t.catId) : undefined}
         variant={variant}
         selected={view.selectedSet.has(t.id)}
         onSelectedChange={(on) => view.toggleSelected(t.id, on)}
@@ -62,7 +62,8 @@ export function ExpenseTable({
               title="Needs review"
               count={review.length}
               action={
-                review.length > 0 && (
+                // Uncategorized expenses can't be marked reviewed.
+                review.some((t) => t.catId != null) && (
                   <SectionAction
                     onClick={() =>
                       view.setNeedsReview(

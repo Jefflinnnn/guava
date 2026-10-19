@@ -6,6 +6,7 @@ import {
   STATUS_FILTER_OPTIONS,
 } from "@/lib/guava/selectors";
 import type { Cat, Filters } from "@/lib/guava/types";
+import { UNCATEGORIZED, UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
 /** The filterable columns, in header order. */
 export type FilterKey = "date" | "name" | "amount" | "cat" | "sub" | "status";
@@ -75,7 +76,7 @@ export function activeFilters(
   if (on.cat)
     chips.push({
       key: "cat",
-      label: `Category: ${f.cats.map((id) => catById.get(id)?.name ?? "?").join(", ")}`,
+      label: `Category: ${f.cats.map((id) => (id === UNCATEGORIZED_KEY ? UNCATEGORIZED.name : (catById.get(id)?.name ?? "?"))).join(", ")}`,
       clear: { cats: [] },
     });
   if (on.sub)

@@ -1,6 +1,9 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useId, useState } from "react";
+
+import { NAME_MAX as CATEGORY_NAME_MAX } from "@/components/categories/category-dialog";
 
 import { CharCountInput } from "@/components/guava/char-count-input";
 import { Chip } from "@/components/guava/chip";
@@ -18,11 +21,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { formatLongDate, TODAY } from "@/lib/guava/dates";
+import { CATEGORY_COLORS } from "@/lib/guava/colors";
+import { formatLongDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import { EXPENSE_CAP_CENTS } from "@/lib/guava/money-input";
-import { useActions, useCategories, useTxns } from "@/lib/guava/store";
+import {
+  useActions,
+  useCategories,
+  useToday,
+  useTxns,
+} from "@/lib/guava/store";
 import type { Cat, DateKey, Txn } from "@/lib/guava/types";
+import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
+import { cn } from "@/lib/utils";
 
 import { NAME_MAX, NOTE_MAX } from "./layout";
 
@@ -30,13 +41,14 @@ type Draft = {
   name: string;
   amountCents: number | null;
   date: DateKey;
-  catId: string;
+  /** null = uncategorized. */
+  catId: string | null;
   subId: string | null;
   note: string;
   reviewed: boolean;
 };
 
-function draftFrom(txn: Txn | undefined, cats: Cat[]): Draft {
+function draftFrom(txn: Txn | undefined, today: DateKey): Draft {
   if (txn)
     return {
       name: txn.name,
@@ -50,11 +62,12 @@ function draftFrom(txn: Txn | undefined, cats: Cat[]): Draft {
   return {
     name: "",
     amountCents: null,
-    date: TODAY,
-    catId: cats[0]?.id ?? "",
+    date: today,
+    catId: null,
     subId: null,
     note: "",
-    // You typed it in yourself, so it starts out reviewed.
+    // You typed it in yourself, so it starts out reviewed (once it has a
+    // category; uncategorized expenses always need review).
     reviewed: true,
   };
 }
@@ -73,7 +86,7 @@ export function ExpenseDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  txnId: number | null;
+  txnId: string | null;
 }) {
   const txns = useTxns();
   const isEdit = txnId != null;
@@ -113,8 +126,9 @@ function ExpenseForm({
   onDone: () => void;
 }) {
   const cats = useCategories();
+  const today = useToday();
   const { upsertTxn, deleteTxn } = useActions();
-  const [draft, setDraft] = useState(() => draftFrom(txn, cats));
+  const [draft, setDraft] = useState(() => draftFrom(txn, today));
   const [amountTouched, setAmountTouched] = useState(false);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -125,10 +139,8 @@ function ExpenseForm({
       ? "Amount must be more than $0.00."
       : undefined;
   const canSave =
-    draft.name.trim() !== "" &&
-    amount > 0 &&
-    isDateKey(draft.date) &&
-    draft.catId !== "";
+    draft.name.trim() !== "" && amount > 0 && isDateKey(draft.date);
+  const reviewed = draft.reviewed && cat != null;
 
   const save = () => {
     if (!canSave) return;
@@ -137,10 +149,10 @@ function ExpenseForm({
       name: draft.name.trim(),
       amountCents: amount,
       date: draft.date,
-      catId: draft.catId,
-      subId: draft.subId,
+      catId: cat?.id ?? null,
+      subId: cat ? draft.subId : null,
       note: draft.note.trim(),
-      needsReview: !draft.reviewed,
+      needsReview: !reviewed,
     });
     onDone();
   };
@@ -203,8 +215,13 @@ function ExpenseForm({
       <SwitchRow
         bordered
         title="Mark as reviewed"
-        description="Reviewed expenses move to the bottom list."
-        checked={draft.reviewed}
+        description={
+          cat
+            ? "Reviewed expenses move to the bottom list."
+            : "Pick a category first. Uncategorized expenses stay in review."
+        }
+        checked={reviewed}
+        disabled={!cat}
         onCheckedChange={(reviewed) => set({ reviewed })}
       />
 
@@ -276,33 +293,100 @@ function DateField({
   );
 }
 
+const CHIP = "h-[30px] px-[11px]";
+
+/** Category chips, "Uncategorized", and "+ New category" to add one inline. */
 function CategoryPicker({
   cats,
   value,
   onChange,
 }: {
   cats: Cat[];
-  value: string;
-  onChange: (catId: string) => void;
+  value: string | null;
+  onChange: (catId: string | null) => void;
 }) {
+  const { upsertCat } = useActions();
+  // null = showing the "+ New category" chip; a string = the name being typed.
+  const [newName, setNewName] = useState<string | null>(null);
+
+  const name = newName?.trim() ?? "";
+  const nameError = cats.some(
+    (c) => c.name.toLowerCase() === name.toLowerCase(),
+  )
+    ? "A category with this name already exists."
+    : undefined;
+
+  const create = () => {
+    if (!name || nameError) return;
+    const id = upsertCat({
+      id: null,
+      name,
+      color: CATEGORY_COLORS[cats.length % CATEGORY_COLORS.length],
+      budgetCents: 0,
+      locked: false,
+    });
+    setNewName(null);
+    onChange(id);
+  };
+
   return (
-    <Field label="Category" className="col-span-2">
+    <Field label="Category" className="col-span-2" error={nameError}>
       <div
         role="group"
         aria-label="Category"
         className="flex flex-wrap gap-1.5"
       >
+        <Chip
+          color={UNCATEGORIZED.color}
+          selected={value == null}
+          onClick={() => onChange(null)}
+          className={CHIP}
+        >
+          {UNCATEGORIZED.name}
+        </Chip>
         {cats.map((c) => (
           <Chip
             key={c.id}
             color={c.color}
             selected={c.id === value}
             onClick={() => onChange(c.id)}
-            className="h-[30px] px-[11px]"
+            className={CHIP}
           >
             {c.name}
           </Chip>
         ))}
+        {newName == null ? (
+          <Button
+            variant="dashed"
+            onClick={() => setNewName("")}
+            className={cn(CHIP, "gap-1 text-[13px]")}
+          >
+            <Plus />
+            New category
+          </Button>
+        ) : (
+          <Input
+            autoFocus
+            value={newName}
+            maxLength={CATEGORY_NAME_MAX}
+            placeholder="Category name"
+            aria-label="New category name"
+            aria-invalid={!!nameError}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                create();
+              } else if (e.key === "Escape") {
+                // Close just the inline input, not the whole dialog.
+                e.stopPropagation();
+                setNewName(null);
+              }
+            }}
+            onBlur={() => (name && !nameError ? create() : setNewName(null))}
+            className="h-[30px] w-40 rounded-lg text-[13px]"
+          />
+        )}
       </div>
     </Field>
   );

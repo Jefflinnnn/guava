@@ -60,7 +60,7 @@ function SettingRow({
 /** Review preferences and appearance. */
 export function PreferencesCard() {
   const settings = useSettings();
-  const { toggleSetting } = useActions();
+  const { setSetting } = useActions();
   const [theme, setTheme] = useTheme();
 
   return (
@@ -71,7 +71,7 @@ export function PreferencesCard() {
           title={t.title}
           description={t.description}
           checked={settings[t.key]}
-          onCheckedChange={() => toggleSetting(t.key)}
+          onCheckedChange={(on) => setSetting(t.key, on)}
           className={ROW}
         />
       ))}
