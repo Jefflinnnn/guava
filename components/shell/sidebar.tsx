@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogOut,
   PanelLeft,
+  Plug,
   Receipt,
   Settings,
   Star,
@@ -96,6 +97,12 @@ export function Sidebar({ user }: { user: SidebarUser }) {
       </nav>
 
       <div className="flex-1" />
+      <NavItem
+        href="/integrations"
+        icon={<Plug />}
+        label="Integrations"
+        collapsed={collapsed}
+      />
       <NavItem
         href="/settings"
         icon={<Settings />}
