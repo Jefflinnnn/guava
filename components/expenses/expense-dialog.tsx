@@ -322,7 +322,6 @@ function CategoryPicker({
       id: null,
       name,
       color: CATEGORY_COLORS[cats.length % CATEGORY_COLORS.length],
-      budgetCents: 0,
       locked: false,
     });
     setNewName(null);

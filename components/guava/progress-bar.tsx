@@ -1,27 +1,20 @@
 import { cn } from "@/lib/utils";
 
-/**
- * Spend-vs-budget bar. Turns red when `value` exceeds `max`.
- * With no budget (`max` 0), any spend fills the bar and counts as over,
- * unless `noBudget="empty"`.
- */
+/** A filled bar showing `value` as a fraction of `max` (empty when `max` is 0). */
 export function ProgressBar({
   value,
   max,
   color,
   height = 6,
-  noBudget = "over",
   className,
 }: {
   value: number;
   max: number;
   color: string;
   height?: 4 | 6;
-  noBudget?: "over" | "empty";
   className?: string;
 }) {
-  const over = max > 0 ? value > max : noBudget === "over" && value > 0;
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : over ? 100 : 0;
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
     <div
       className={cn(
@@ -32,7 +25,7 @@ export function ProgressBar({
     >
       <div
         className="h-full rounded-full transition-[width]"
-        style={{ width: `${pct}%`, background: over ? "var(--danger)" : color }}
+        style={{ width: `${pct}%`, background: color }}
       />
     </div>
   );

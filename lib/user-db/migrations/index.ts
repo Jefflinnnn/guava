@@ -2,6 +2,7 @@
 import type { UserDbMigration } from "./types";
 import m0001 from "./0001_init";
 import m0002 from "./0002_expenses_and_categories";
+import m0003 from "./0003_remove_budgets";
 
 export const USER_DB_MIGRATIONS: {
   name: string;
@@ -9,4 +10,5 @@ export const USER_DB_MIGRATIONS: {
 }[] = [
   { name: "0001_init", migration: m0001 },
   { name: "0002_expenses_and_categories", migration: m0002 },
+  { name: "0003_remove_budgets", migration: m0003 },
 ];

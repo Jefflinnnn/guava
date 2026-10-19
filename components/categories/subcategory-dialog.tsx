@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { CategorySwatch } from "@/components/guava/category-swatch";
 import { CharCountInput } from "@/components/guava/char-count-input";
-import { MoneyInput } from "@/components/guava/money-input";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { money0 } from "@/lib/guava/format";
-import { BUDGET_CAP_CENTS } from "@/lib/guava/money-input";
 import { useActions, useCatById } from "@/lib/guava/store";
 import type { Cat } from "@/lib/guava/types";
 
@@ -87,16 +84,7 @@ function SubcategoryForm({
   const orig = subId ? cat.subs.find((s) => s.id === subId) : undefined;
 
   const [name, setName] = useState(orig?.name ?? "");
-  const [budgetCents, setBudgetCents] = useState<number | null>(
-    orig?.budgetCents || null,
-  );
   const [nameError, setNameError] = useState("");
-
-  const otherAllocated = cat.subs
-    .filter((s) => s.id !== orig?.id)
-    .reduce((a, s) => a + s.budgetCents, 0);
-  const total = otherAllocated + (budgetCents ?? 0);
-  const over = total > cat.budgetCents;
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +102,6 @@ function SubcategoryForm({
     upsertSub(cat.id, {
       id: orig?.id ?? null,
       name: trimmed,
-      budgetCents: budgetCents ?? 0,
     });
     onDone();
   };
@@ -131,31 +118,17 @@ function SubcategoryForm({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4">
-        <CharCountInput
-          label="Name"
-          value={name}
-          max={NAME_MAX}
-          placeholder="e.g. Internet"
-          error={nameError}
-          onChange={(v) => {
-            setName(v);
-            setNameError("");
-          }}
-        />
-        <MoneyInput
-          label="Monthly budget"
-          valueCents={budgetCents}
-          onChange={setBudgetCents}
-          capCents={BUDGET_CAP_CENTS}
-          hintTone={over ? "warning" : "muted"}
-          hint={
-            over
-              ? `Subcategories would total ${money0(total)}, above ${cat.name}’s ${money0(cat.budgetCents)} budget.`
-              : `${money0(Math.max(0, cat.budgetCents - otherAllocated))} of ${cat.name}’s budget is unallocated.`
-          }
-        />
-      </div>
+      <CharCountInput
+        label="Name"
+        value={name}
+        max={NAME_MAX}
+        placeholder="e.g. Internet"
+        error={nameError}
+        onChange={(v) => {
+          setName(v);
+          setNameError("");
+        }}
+      />
 
       <FormDialogFooter
         saveLabel={orig ? "Save" : "Add"}

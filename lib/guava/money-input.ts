@@ -2,7 +2,6 @@ export type ParseResult<T> =
   { value: T; error?: undefined } | { value?: never; error: string };
 
 export const EXPENSE_CAP_CENTS = 99_999_99;
-export const BUDGET_CAP_CENTS = 999_999_99;
 
 const NUMBERS_ONLY = "Numbers only — letters and symbols aren’t allowed.";
 

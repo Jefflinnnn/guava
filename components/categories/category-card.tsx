@@ -6,11 +6,10 @@ import { CategoryTile } from "@/components/guava/category-swatch";
 import { ProgressBar } from "@/components/guava/progress-bar";
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { money0Fit, plural } from "@/lib/guava/format";
+import { money0Fit, percent, plural } from "@/lib/guava/format";
 import type { CategoryStat } from "@/lib/guava/selectors";
 import { cn } from "@/lib/utils";
 
-import { BudgetLeft } from "./budget-left";
 import { pressable } from "./pressable";
 import { SubcategoryRow } from "./subcategory-row";
 
@@ -25,7 +24,7 @@ export type CategoryCardHandlers = {
   onDeleteSub: (subId: string) => void;
 };
 
-/** An expandable category: budget summary on top, subcategories below. */
+/** An expandable category: this month's spend on top, subcategories below. */
 export function CategoryCard({
   stat,
   expanded,
@@ -45,7 +44,7 @@ export function CategoryCard({
 }
 
 function CategoryCardHeader({
-  stat: { cat, spent, count },
+  stat: { cat, spent, count, share },
   expanded,
   onToggle,
   onDelete,
@@ -79,18 +78,16 @@ function CategoryCardHeader({
             {plural(cat.subs.length, "subcategory", "subcategories")}
           </span>
         </div>
-        <ProgressBar value={spent} max={cat.budgetCents} color={cat.color} />
+        {/* The bar is this category's share of the month's spending. */}
+        <ProgressBar value={share} max={1} color={cat.color} />
       </div>
       <div className="text-right sm:min-w-[110px]">
         <div className="text-lg font-semibold tabular">
-          {money0Fit(cat.budgetCents, AMOUNT_CHARS)}
+          {money0Fit(spent, AMOUNT_CHARS)}
         </div>
-        <BudgetLeft
-          spent={spent}
-          budget={cat.budgetCents}
-          maxChars={AMOUNT_CHARS}
-          className="text-xs"
-        />
+        <div className="text-xs text-ink-3 tabular">
+          {percent(share)} of spending
+        </div>
       </div>
       {cat.locked ? (
         <span
@@ -120,29 +117,16 @@ function CategoryCardHeader({
 }
 
 function SubcategoryPanel({
-  stat: { cat, subs, allocated },
+  stat: { cat, subs, spent },
   onEdit,
   onAddSub,
   onEditSub,
   onDeleteSub,
 }: CategoryCardHandlers & { stat: CategoryStat }) {
-  const overAllocated = allocated > cat.budgetCents;
   return (
     <div className="flex flex-col gap-1 border-t border-muted bg-surface pt-2.5 pr-3 pb-3 pl-3 sm:pl-[82px]">
-      <div className="flex items-baseline justify-between gap-3 px-2 pt-1 pb-1.5 text-xs">
-        <span className="font-semibold tracking-[0.02em] text-ink-3 uppercase">
-          Subcategories
-        </span>
-        <span
-          className={cn(
-            "tabular",
-            overAllocated ? "text-danger" : "text-ink-3",
-          )}
-        >
-          Allocated {money0Fit(allocated, AMOUNT_CHARS)} of{" "}
-          {money0Fit(cat.budgetCents, AMOUNT_CHARS)}
-          {overAllocated && " · over category budget"}
-        </span>
+      <div className="px-2 pt-1 pb-1.5 text-xs font-semibold tracking-[0.02em] text-ink-3 uppercase">
+        Subcategories
       </div>
 
       {subs.length ? (
@@ -150,6 +134,7 @@ function SubcategoryPanel({
           <SubcategoryRow
             key={s.sub.id}
             stat={s}
+            categorySpent={spent}
             color={cat.color}
             onEdit={() => onEditSub(s.sub.id)}
             onDelete={() => onDeleteSub(s.sub.id)}

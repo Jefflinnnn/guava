@@ -54,8 +54,6 @@ export type CategoryStat = {
   /** Share of the month's total spend, 0–1. */
   share: number;
   subs: SubStat[];
-  /** Sum of the subcategory budgets. */
-  allocated: number;
 };
 
 export type UncategorizedStat = { spent: number; count: number; share: number };
@@ -89,7 +87,6 @@ export function categoryStats(
           sub,
           ...(spent.get(`${cat.id}/${sub.id}`) ?? { spent: 0, count: 0 }),
         })),
-        allocated: cat.subs.reduce((a, s) => a + s.budgetCents, 0),
       };
     })
     .sort((a, b) => b.spent - a.spent);

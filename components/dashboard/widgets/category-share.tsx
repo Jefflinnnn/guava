@@ -2,7 +2,7 @@
 
 import { CategorySwatch } from "@/components/guava/category-swatch";
 import { monthLabel } from "@/lib/guava/dates";
-import { money0Fit } from "@/lib/guava/format";
+import { money0Fit, percent } from "@/lib/guava/format";
 import {
   useCategoryStats,
   useSelectedMonth,
@@ -72,9 +72,7 @@ export function CategoryShareWidget() {
               <span className="min-w-0 flex-1 truncate text-ink-2">
                 {s.name}
               </span>
-              <span className="font-mono text-xs">
-                {(s.share * 100).toFixed(0)}%
-              </span>
+              <span className="font-mono text-xs">{percent(s.share)}</span>
             </li>
           ))}
         </ul>

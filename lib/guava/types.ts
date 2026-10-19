@@ -16,14 +16,13 @@ export type Txn = {
   note: string;
 };
 
-export type Sub = { id: string; name: string; budgetCents: number };
+export type Sub = { id: string; name: string };
 
 export type Cat = {
   id: string;
   name: string;
   /** Any CSS color (presets are oklch, custom picks are hex). */
   color: string;
-  budgetCents: number;
   locked: boolean;
   subs: Sub[];
 };

@@ -25,11 +25,10 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
         id: true,
         name: true,
         color: true,
-        budgetCents: true,
         locked: true,
         subs: {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-          select: { id: true, name: true, budgetCents: true },
+          select: { id: true, name: true },
         },
       },
     }),

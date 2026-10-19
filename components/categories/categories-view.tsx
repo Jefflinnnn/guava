@@ -27,7 +27,7 @@ import { useDialogTarget } from "./use-dialog-target";
 type SubTarget = { catId: string | null; subId: string | null };
 const NO_SUB: SubTarget = { catId: null, subId: null };
 
-/** The Categories page: monthly budgets per category, with their subcategories. */
+/** The Categories page: each category's spend this month, with its subcategories. */
 export function CategoriesView() {
   const stats = useCategoryStats();
   const none = useUncategorizedStat();
@@ -48,7 +48,7 @@ export function CategoriesView() {
     <Page width="medium">
       <PageHeader
         title="Categories"
-        subtitle={`Monthly budgets · spent in ${monthLabel(month)}`}
+        subtitle={`Spending in ${monthLabel(month)}`}
         actions={
           stats.length > 0 && (
             <Button onClick={() => catDialog.show(null)}>
@@ -100,7 +100,7 @@ export function CategoriesView() {
         <EmptyState
           icon={<Tag />}
           title="No categories yet"
-          description="Create categories like Food or Transport and set a monthly budget for each."
+          description="Create categories like Food or Transport to see where your money goes."
           action={
             <Button className="mt-1.5" onClick={() => catDialog.show(null)}>
               Insert a category

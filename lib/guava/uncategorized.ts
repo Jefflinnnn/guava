@@ -1,5 +1,5 @@
-// Expenses without a category. Not a stored category: it has no budget and
-// can't be renamed or deleted, and its expenses always need review.
+// Expenses without a category. Not a stored category: it can't be renamed
+// or deleted, and its expenses always need review.
 
 /** How uncategorized expenses are labeled wherever a category would show. */
 export const UNCATEGORIZED = { name: "Uncategorized", color: "var(--faint)" };
