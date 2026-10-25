@@ -79,3 +79,16 @@ model Expense {
   @@index([categoryId])
   @@index([subcategoryId])
 }
+
+// The user's own Plaid API keys (bring your own key). One row, or none when
+// bank syncing isn't set up. Plaid is optional: without this row guava is a
+// manual expense tracker.
+model PlaidConfig {
+  id        Int      @id @default(1)
+  clientId  String   @db.VarChar(64)
+  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never sent to the browser.
+  secret    String
+  // "sandbox" or "production".
+  env       String   @db.VarChar(16)
+  updatedAt DateTime @updatedAt
+}
