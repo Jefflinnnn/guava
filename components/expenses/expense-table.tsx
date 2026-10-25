@@ -4,7 +4,7 @@ import { Check, CircleCheck } from "lucide-react";
 
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { useCatById } from "@/lib/guava/store";
+import { useCatById, useReviewCount } from "@/lib/guava/store";
 import type { Txn } from "@/lib/guava/types";
 
 import { ExpenseRow, type ExpenseRowVariant } from "./expense-row";
@@ -31,6 +31,7 @@ export function ExpenseTable({
   onOpen: (txn: Txn) => void;
 }) {
   const catById = useCatById();
+  const reviewCount = useReviewCount();
 
   const rows = (list: Txn[], variant: ExpenseRowVariant) =>
     list.map((t) => (
@@ -80,7 +81,9 @@ export function ExpenseTable({
             {rows(review, "review")}
             {review.length === 0 && (
               <SectionMessage icon={<CircleCheck />}>
-                All caught up — nothing to review.
+                {reviewCount
+                  ? "No expenses that need review match these filters."
+                  : "All caught up — nothing to review."}
               </SectionMessage>
             )}
           </section>
