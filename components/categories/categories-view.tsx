@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronRight, Plus, Tag } from "lucide-react";
 import Link from "next/link";
 
+import { MonthControl } from "@/components/dashboard/month-control";
 import { CategorySwatch } from "@/components/guava/category-swatch";
 import { EmptyState } from "@/components/guava/empty-state";
 import { Page, PageHeader } from "@/components/shell/page";
@@ -51,10 +52,13 @@ export function CategoriesView() {
         subtitle={`Spending in ${monthLabel(month)}`}
         actions={
           stats.length > 0 && (
-            <Button onClick={() => catDialog.show(null)}>
-              <Plus />
-              Add category
-            </Button>
+            <>
+              <MonthControl />
+              <Button onClick={() => catDialog.show(null)}>
+                <Plus />
+                Add category
+              </Button>
+            </>
           )
         }
       />
