@@ -1,22 +1,28 @@
-// Dev tool: shows everything Plaid returns for a workspace's connected banks,
-// next to what guava imported, so the mapping can be checked by eye.
+// Dev tool: prints the raw Plaid API data for a workspace's connected banks
+// as JSON, for piping into jq.
 //
-//   pnpm plaid:dump              (when only one workspace exists)
-//   pnpm plaid:dump you@x.com    (pick a workspace by its owner's email)
+//   pnpm -s plaid:dump | jq '.[].transactions[] | {date, amount, name}'
+//   pnpm -s plaid:dump you@x.com     (when there are several workspaces)
 //
-// Prints one line per transaction and writes the raw responses to
-// .plaid-dump/ (gitignored). It reads from Plaid from the start of history and
-// never touches the saved sync cursor, so it doesn't affect "Sync now".
-// Access tokens and secrets are never printed or written.
+// Output: one entry per bank, with /accounts/get's accounts and every
+// transaction /transactions/sync returns from the start of history. It never
+// touches the saved sync cursor, so it doesn't affect "Sync now". Access
+// tokens and secrets are never printed.
 
 import { createDecipheriv } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 
 import { neon } from "@neondatabase/serverless";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
-const OUT_DIR = ".plaid-dump";
+// Same precedence as Next: .env.local wins over .env (neither overrides the
+// shell's own variables).
+for (const file of [".env.local", ".env"]) {
+  try {
+    process.loadEnvFile(file);
+  } catch {
+    // Missing file.
+  }
+}
 
 function decrypt(payload) {
   const key = Buffer.from(process.env.ENCRYPTION_KEY ?? "", "base64");
@@ -74,11 +80,8 @@ async function allTransactions(plaid, accessToken) {
   }
 }
 
-const money = (n) => (n < 0 ? "-" : " ") + "$" + Math.abs(n).toFixed(2);
-
 const workspace = await pickWorkspace(process.argv[2]);
 const db = neon(decrypt(workspace.neonUrl));
-console.log(`Workspace ${workspace.database} (${workspace.email})`);
 
 const [config] = await db.query(
   `SELECT "clientId", secret, env FROM "PlaidConfig" WHERE id = 1`,
@@ -101,58 +104,19 @@ const items = await db.query(
 );
 if (!items.length) fail("No banks connected in this workspace.");
 
-const imported = new Map(
-  (
-    await db.query(
-      `SELECT "plaidTransactionId", "amountCents" FROM "Expense"
-        WHERE "plaidTransactionId" IS NOT NULL`,
-    )
-  ).map((e) => [e.plaidTransactionId, e.amountCents]),
-);
-
-mkdirSync(OUT_DIR, { recursive: true });
+const banks = [];
 for (const item of items) {
   const accessToken = decrypt(item.accessToken);
-  let accounts, transactions;
   try {
-    accounts = (await plaid.accountsGet({ access_token: accessToken })).data
-      .accounts;
-    transactions = await allTransactions(plaid, accessToken);
+    const { data } = await plaid.accountsGet({ access_token: accessToken });
+    banks.push({
+      institution: item.institutionName,
+      item: data.item,
+      accounts: data.accounts,
+      transactions: await allTransactions(plaid, accessToken),
+    });
   } catch (error) {
     console.error(`${item.institutionName}: Plaid error ${plaidError(error)}`);
-    continue;
   }
-  const mask = new Map(accounts.map((a) => [a.account_id, a.mask ?? "????"]));
-
-  const name = item.institutionName ?? item.id;
-  console.log(`\n${name}: ${accounts.length} accounts`);
-  for (const a of accounts) {
-    console.log(
-      `  ••${a.mask} ${a.type}/${a.subtype}  ${a.name}  balance ${a.balances.current}`,
-    );
-  }
-
-  console.log(`\n${transactions.length} transactions (✓ = in guava)`);
-  transactions.sort((a, b) => a.date.localeCompare(b.date));
-  for (const t of transactions) {
-    const inGuava = imported.has(t.transaction_id) ? "✓" : " ";
-    console.log(
-      [
-        inGuava,
-        t.date,
-        `••${mask.get(t.account_id)}`,
-        money(t.amount).padStart(11),
-        (t.personal_finance_category?.primary ?? "-").padEnd(24),
-        t.pending ? "pending" : "       ",
-        `${t.merchant_name ?? "-"} | ${t.name}`,
-      ].join("  "),
-    );
-  }
-
-  const file = join(
-    OUT_DIR,
-    `${name.replace(/\W+/g, "-").toLowerCase()}-${item.id}.json`,
-  );
-  writeFileSync(file, JSON.stringify({ accounts, transactions }, null, 2));
-  console.log(`\nRaw responses: ${file}`);
 }
+console.log(JSON.stringify(banks, null, 2));

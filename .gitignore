@@ -44,6 +44,3 @@ next-env.d.ts
 # prisma generated client
 /generated
 .neon
-
-# pnpm plaid:dump output (raw bank data)
-/.plaid-dump
