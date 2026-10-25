@@ -10,6 +10,7 @@ import { Chip } from "@/components/guava/chip";
 import { Field } from "@/components/guava/field";
 import { InitialAvatar } from "@/components/guava/initial-avatar";
 import { MoneyInput } from "@/components/guava/money-input";
+import { Segmented } from "@/components/guava/segmented";
 import { SwitchRow } from "@/components/guava/switch-row";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +40,10 @@ import { NAME_MAX, NOTE_MAX } from "./layout";
 
 type Draft = {
   name: string;
+  /** The amount as typed, always positive; `refund` gives the sign. */
   amountCents: number | null;
+  /** Money back from a merchant: saved as a negative amount. */
+  refund: boolean;
   date: DateKey;
   /** null = uncategorized. */
   catId: string | null;
@@ -52,7 +56,8 @@ function draftFrom(txn: Txn | undefined, today: DateKey): Draft {
   if (txn)
     return {
       name: txn.name,
-      amountCents: txn.amountCents,
+      amountCents: Math.abs(txn.amountCents),
+      refund: txn.amountCents < 0,
       date: txn.date,
       catId: txn.catId,
       subId: txn.subId,
@@ -62,6 +67,7 @@ function draftFrom(txn: Txn | undefined, today: DateKey): Draft {
   return {
     name: "",
     amountCents: null,
+    refund: false,
     date: today,
     catId: null,
     subId: null,
@@ -147,7 +153,7 @@ function ExpenseForm({
     upsertTxn({
       id: txn?.id ?? null,
       name: draft.name.trim(),
-      amountCents: amount,
+      amountCents: draft.refund ? -amount : amount,
       date: draft.date,
       catId: cat?.id ?? null,
       subId: cat ? draft.subId : null,
@@ -169,7 +175,7 @@ function ExpenseForm({
       <ExpensePreview
         name={draft.name}
         date={draft.date}
-        amountCents={amount}
+        amountCents={draft.refund ? -amount : amount}
       />
 
       <div className="grid grid-cols-2 gap-3.5">
@@ -186,6 +192,17 @@ function ExpenseForm({
         </div>
         <MoneyInput
           label="Amount"
+          aside={
+            <Segmented
+              aria-label="Expense or refund"
+              value={draft.refund ? "refund" : "expense"}
+              onChange={(v) => set({ refund: v === "refund" })}
+              options={[
+                { value: "expense", label: "Spent" },
+                { value: "refund", label: "Refund" },
+              ]}
+            />
+          }
           valueCents={draft.amountCents}
           onChange={(amountCents) => {
             setAmountTouched(true);
@@ -265,7 +282,12 @@ function ExpensePreview({
           {isDateKey(date) ? formatLongDate(date) : "No date"}
         </div>
       </div>
-      <div className="text-[22px] font-semibold tracking-[-0.02em] tabular">
+      <div
+        className={cn(
+          "text-[22px] font-semibold tracking-[-0.02em] tabular",
+          amountCents < 0 && "text-success",
+        )}
+      >
         {money(amountCents)}
       </div>
     </div>
