@@ -1,5 +1,7 @@
 "use server";
 
+import type { AccountBase } from "plaid";
+
 import { getCurrentUserId } from "@/lib/current-user";
 import { encrypt } from "@/lib/crypto";
 import {
@@ -11,6 +13,7 @@ import {
   userPlaidClient,
 } from "@/lib/plaid";
 import { syncItem, type SyncCounts } from "@/lib/plaid-sync";
+import type { UserDb } from "@/lib/user-db/client";
 import { getUserDb } from "@/lib/workspace";
 
 // Bank connections through Plaid, made with the user's own keys and stored in
@@ -54,6 +57,26 @@ export async function createLinkToken(): Promise<
 }
 
 /**
+ * Whether an already saved bank connection has the same institution and an
+ * account with the same last four digits and type.
+ */
+async function alreadyConnected(
+  db: UserDb,
+  institution: string | null,
+  accounts: AccountBase[],
+) {
+  if (!institution) return false;
+  const saved = await db.bankAccount.findMany({
+    where: { item: { institutionName: institution } },
+    select: { mask: true, type: true, subtype: true },
+  });
+  const key = (a: { mask: string | null; type: string; subtype: unknown }) =>
+    `${a.mask}/${a.type}/${a.subtype ?? ""}`;
+  const savedKeys = new Set(saved.map(key));
+  return accounts.some((a) => a.mask && savedKeys.has(key(a)));
+}
+
+/**
  * Step 3 of Plaid Link: swaps the one-time public token for an access token,
  * saves the bank and its accounts, then runs the first sync.
  */
@@ -85,6 +108,18 @@ export async function connectBank(
           ).data.institution.name
         : null);
 
+    // Linking the same bank again makes a new Plaid connection with new
+    // account and transaction ids, which would import everything twice.
+    if (await alreadyConnected(db, institution, accountsData.accounts)) {
+      await plaid
+        .itemRemove({ access_token: accessToken })
+        .catch((error) => logPlaidError("Plaid item remove failed", error));
+      return {
+        ok: false,
+        error: `${institution ?? "That bank"} is already connected.`,
+      };
+    }
+
     const item = await db.plaidItem.upsert({
       where: { plaidItemId: exchange.item_id },
       update: {
@@ -100,7 +135,7 @@ export async function connectBank(
     });
     for (const a of accountsData.accounts) {
       const fields = {
-        name: a.official_name ?? a.name,
+        name: a.name,
         mask: a.mask,
         type: a.type,
         subtype: a.subtype ?? null,
