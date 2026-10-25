@@ -89,3 +89,39 @@ export async function userPlaidClient(db: UserDb): Promise<PlaidApi> {
   if (!keys) throw new NoPlaidKeysError();
   return plaidClient(keys);
 }
+
+/** A connected bank as the browser may see it. Never the access token. */
+export type BankDetails = {
+  id: string;
+  institution: string;
+  /** ISO time of the last successful sync, or null. */
+  lastSyncedAt: string | null;
+  accounts: {
+    id: string;
+    name: string;
+    mask: string | null;
+    subtype: string | null;
+  }[];
+};
+
+/** The user's connected banks, newest first. */
+export async function loadBanks(db: UserDb): Promise<BankDetails[]> {
+  const items = await db.plaidItem.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      institutionName: true,
+      lastSyncedAt: true,
+      accounts: {
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, mask: true, subtype: true },
+      },
+    },
+  });
+  return items.map((i) => ({
+    id: i.id,
+    institution: i.institutionName ?? "Bank",
+    lastSyncedAt: i.lastSyncedAt?.toISOString() ?? null,
+    accounts: i.accounts,
+  }));
+}

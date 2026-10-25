@@ -173,6 +173,10 @@ function makeActions(dispatch: React.Dispatch<Action>) {
 
   return {
     setMonth: (month: Month) => dispatch({ type: "setMonth", month }),
+    /** Re-reads everything from the database, e.g. after a bank sync. */
+    reload: async () => {
+      dispatch({ type: "reload", snapshot: await server.getSnapshot() });
+    },
     upsertTxn: ({ id, ...draft }: TxnDraft) => {
       const isNew = id == null;
       const input =

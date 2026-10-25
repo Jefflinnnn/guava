@@ -25,7 +25,6 @@ model User {
   sessions      Session[]
   authAccounts  AuthAccount[]
   workspace     Workspace?
-  plaidItems    PlaidItem[]
 }
 
 // One signed-in browser. The session cookie holds `token`.
@@ -45,7 +44,7 @@ model Session {
 
 // A login method for a user, e.g. "credential" (email + password hash).
 // Better Auth calls this model "account"; it's renamed here (see
-// lib/auth.ts) so it doesn't collide with the Plaid bank Account below.
+// lib/auth.ts) so it can't be confused with a bank account.
 model AuthAccount {
   id                    String    @id
   userId                String
@@ -95,40 +94,4 @@ model Workspace {
   schemaVersion String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-}
-
-// --- Plaid ---
-
-// One row per bank connection ("Item" in Plaid terms).
-model PlaidItem {
-  id                 String    @id @default(cuid())
-  userId             String
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plaidItemId        String    @unique
-  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never send to the browser.
-  accessToken        String
-  institutionId      String?
-  institutionName    String?
-  // Cursor for /transactions/sync, so each sync only pulls what changed.
-  transactionsCursor String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  accounts           Account[]
-
-  @@index([userId])
-}
-
-model Account {
-  id             String    @id @default(cuid())
-  plaidItemId    String
-  item           PlaidItem @relation(fields: [plaidItemId], references: [id], onDelete: Cascade)
-  plaidAccountId String    @unique
-  name           String
-  mask           String?
-  type           String
-  subtype        String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([plaidItemId])
 }

@@ -97,3 +97,13 @@ export function initialsOf(name: string): string {
       .toUpperCase() || "?"
   );
 }
+
+/** "just now", "5 min ago", "3 hr ago", "2 days ago" */
+export function timeAgo(iso: string, now: number = Date.now()): string {
+  const min = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr ago`;
+  return plural(Math.floor(hr / 24), "day") + " ago";
+}
