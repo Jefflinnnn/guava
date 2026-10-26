@@ -31,6 +31,9 @@ export function useExpensesView() {
 
   const { review, reviewed, catCounts } = useMemo(() => {
     const list = filterTxns(txns, filters, sort, today);
+    // Like an inbox, expenses that need review show whatever their date, so a
+    // bank import of older transactions can't hide behind the date filter.
+    const undated = filterTxns(txns, { ...filters, date: "all" }, sort, today);
     const catCounts = new Map<string, number>();
     for (const t of txns) {
       if (!matchesDate(t, filters.date, today)) continue;
@@ -38,7 +41,7 @@ export function useExpensesView() {
       catCounts.set(key, (catCounts.get(key) ?? 0) + 1);
     }
     return {
-      review: list.filter((t) => t.needsReview),
+      review: undated.filter((t) => t.needsReview),
       reviewed: list.filter((t) => !t.needsReview),
       catCounts,
     };
