@@ -65,7 +65,9 @@ export function ExpenseTable({
   const { review, reviewed, reviewedShown } = view;
 
   return (
-    <Card className="overflow-x-auto">
+    // The card is the scroll area (both ways), so the column header and the
+    // section headers can stick to its top.
+    <Card className="min-h-0 overflow-auto">
       <div
         className={TABLE_MIN_WIDTH[view.showAccounts ? "accounts" : "plain"]}
       >
@@ -77,8 +79,11 @@ export function ExpenseTable({
               marker={<ReviewDot />}
               title="Needs review"
               count={review.length}
+              collapsed={view.collapsed.review}
+              onToggle={() => view.toggleCollapsed("review")}
               action={
                 // Uncategorized spending can't be marked reviewed.
+                !view.collapsed.review &&
                 review.some(canMarkReviewed) && (
                   <SectionAction
                     onClick={() =>
@@ -93,8 +98,8 @@ export function ExpenseTable({
                 )
               }
             />
-            {rows(review, "review")}
-            {review.length === 0 && (
+            {!view.collapsed.review && rows(review, "review")}
+            {!view.collapsed.review && review.length === 0 && (
               <SectionMessage icon={<CircleCheck />}>
                 {reviewCount
                   ? "No expenses that need review match these filters."
@@ -124,26 +129,30 @@ export function ExpenseTable({
               marker={<Check className="size-3.5 text-ink-3" />}
               title="Reviewed"
               count={reviewed.length}
+              collapsed={view.collapsed.reviewed}
+              onToggle={() => view.toggleCollapsed("reviewed")}
             />
-            {rows(reviewedShown, "reviewed")}
-            <SectionFooter
-              action={
-                reviewedShown.length < reviewed.length && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={view.showMoreReviewed}
-                  >
-                    Show more
-                  </Button>
-                )
-              }
-            >
-              {reviewed.length
-                ? `Showing ${reviewedShown.length} of ${reviewed.length} reviewed`
-                : "No reviewed expenses match these filters"}
-            </SectionFooter>
+            {!view.collapsed.reviewed && rows(reviewedShown, "reviewed")}
+            {!view.collapsed.reviewed && (
+              <SectionFooter
+                action={
+                  reviewedShown.length < reviewed.length && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      onClick={view.showMoreReviewed}
+                    >
+                      Show more
+                    </Button>
+                  )
+                }
+              >
+                {reviewed.length
+                  ? `Showing ${reviewedShown.length} of ${reviewed.length} reviewed`
+                  : "No reviewed expenses match these filters"}
+              </SectionFooter>
+            )}
           </section>
         )}
         {!view.showDeleted && view.deletedCount > 0 && (

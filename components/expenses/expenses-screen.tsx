@@ -26,7 +26,9 @@ export function ExpensesScreen() {
   });
 
   return (
-    <Page width="full">
+    // The page fills the viewport and only the table scrolls, so the header
+    // and toolbar stay in reach.
+    <Page width="full" className="min-h-0 flex-1">
       <PageHeader
         title="Expenses"
         subtitle={`${reviewCount} need review · ${txns.length} total transactions`}

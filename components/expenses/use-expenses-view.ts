@@ -49,6 +49,9 @@ export function useExpensesView() {
   const [reviewedLimit, setReviewedLimit] = useState(REVIEWED_PAGE_SIZE);
   // The last batch moved to Recently deleted, for the toolbar's Undo.
   const [lastDeleted, setLastDeleted] = useState<string[]>([]);
+  const [collapsed, setCollapsed] = useState<
+    Record<CollapsibleSection, boolean>
+  >({ review: false, reviewed: false });
 
   const { review, reviewed, catCounts, bankCounts, accountCounts } =
     useMemo(() => {
@@ -110,9 +113,10 @@ export function useExpensesView() {
     return lastDeleted.filter((id) => ids.has(id));
   }, [deletedTxns, lastDeleted]);
 
+  // A collapsed section's rows aren't visible, so they can't stay selected.
   const visibleIds = [
-    ...(showReview ? review : []),
-    ...(showReviewed ? reviewedShown : []),
+    ...(showReview && !collapsed.review ? review : []),
+    ...(showReviewed && !collapsed.reviewed ? reviewedShown : []),
     ...deleted,
   ].map((t) => t.id);
   // Only rows on screen count as selected, so a bulk action never reaches an
@@ -144,6 +148,7 @@ export function useExpensesView() {
     showAccounts: accounts.length > 0,
     /** Accounts with at least one expense (a mortgage or 401k may have none). */
     usedAccounts,
+    collapsed,
     selected,
     selectedSet,
     allSelected,
@@ -164,6 +169,9 @@ export function useExpensesView() {
         key,
         dir: s.key === key ? (-s.dir as 1 | -1) : DEFAULT_SORT_DIR[key],
       }));
+    },
+    toggleCollapsed(section: CollapsibleSection) {
+      setCollapsed((c) => ({ ...c, [section]: !c[section] }));
     },
     showMoreReviewed() {
       setReviewedLimit((n) => n + REVIEWED_PAGE_SIZE);
@@ -228,5 +236,7 @@ export function useExpensesView() {
     },
   };
 }
+
+export type CollapsibleSection = "review" | "reviewed";
 
 export type ExpensesView = ReturnType<typeof useExpensesView>;
