@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import { canMarkReviewed, notSpendingLabel } from "@/lib/guava/spending";
-import type { Cat, Txn } from "@/lib/guava/types";
+import { accountTitle } from "@/lib/guava/accounts";
+import type { Account, Cat, Txn } from "@/lib/guava/types";
 import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ export type ExpenseRowVariant = "review" | "reviewed";
 export function ExpenseRow({
   txn,
   cat,
+  account,
   variant,
   selected,
   onSelectedChange,
@@ -33,6 +35,11 @@ export function ExpenseRow({
 }: {
   txn: Txn;
   cat: Cat | undefined;
+  /**
+   * The bank account it came from: null when typed in, undefined when the
+   * Bank, Card and Last 4 columns are hidden.
+   */
+  account: Account | null | undefined;
   variant: ExpenseRowVariant;
   selected: boolean;
   /** `range` is true for a shift-click, which selects the rows in between. */
@@ -67,7 +74,7 @@ export function ExpenseRow({
         }
       }}
       className={cn(
-        EXPENSE_GRID,
+        EXPENSE_GRID[account === undefined ? "plain" : "accounts"],
         "h-13 cursor-pointer border-b border-muted text-sm outline-none focus-visible:bg-muted",
         review
           ? "bg-card font-semibold shadow-[inset_3px_0_0_var(--pink)]"
@@ -108,6 +115,8 @@ export function ExpenseRow({
           </span>
         )}
       </div>
+
+      {account !== undefined && <AccountCells account={account} />}
 
       <span
         className={cn(
@@ -165,5 +174,31 @@ export function ExpenseRow({
         {review ? <Check /> : <RotateCcw />}
       </Button>
     </div>
+  );
+}
+
+/** Bank · Card · Last 4, or dashes for an expense typed in by hand. */
+function AccountCells({ account }: { account: Account | null }) {
+  const cell = "truncate pr-2.5 text-[13px] font-normal";
+  if (!account)
+    return (
+      <>
+        <span className={cn(cell, "text-faint")}>—</span>
+        <span className={cn(cell, "text-faint")}>—</span>
+        <span className={cn(cell, "text-faint")}>—</span>
+      </>
+    );
+  return (
+    <>
+      <span className={cn(cell, "text-ink-2")}>{account.bank ?? "Bank"}</span>
+      <span className={cn(cell, "text-ink-2")} title={accountTitle(account)}>
+        {account.name}
+      </span>
+      <span
+        className={cn(cell, account.mask ? "text-ink-2 tabular" : "text-faint")}
+      >
+        {account.mask ? `••${account.mask}` : "—"}
+      </span>
+    </>
   );
 }

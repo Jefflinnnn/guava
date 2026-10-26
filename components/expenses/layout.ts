@@ -1,14 +1,23 @@
 import type { SortKey } from "@/lib/guava/types";
 
 /**
- * Column template shared by the header row and every expense row:
- * select · Date · Name · Amount · Category · Subcategory · Needs review? · action
+ * Column templates shared by the header row and every expense row:
+ * select · Date · Name · [Bank · Card · Last 4] · Amount · Category ·
+ * Subcategory · Needs review? · action. The bracketed columns show only once
+ * a bank has been connected.
  */
-export const EXPENSE_GRID =
-  "grid grid-cols-[40px_104px_minmax(130px,1fr)_100px_140px_132px_124px_44px] items-center";
+export const EXPENSE_GRID = {
+  plain:
+    "grid grid-cols-[40px_104px_minmax(130px,1fr)_100px_140px_132px_124px_44px] items-center",
+  accounts:
+    "grid grid-cols-[40px_104px_minmax(130px,1fr)_112px_150px_72px_100px_140px_132px_124px_44px] items-center",
+};
 
 /** Below this width the table scrolls horizontally inside its card. */
-export const TABLE_MIN_WIDTH = "min-w-[814px]";
+export const TABLE_MIN_WIDTH = {
+  plain: "min-w-[814px]",
+  accounts: "min-w-[1148px]",
+};
 
 /** Reviewed rows are paged this many at a time ("Show more"). */
 export const REVIEWED_PAGE_SIZE = 40;

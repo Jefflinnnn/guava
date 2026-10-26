@@ -18,6 +18,21 @@ export type Txn = {
   spending: boolean;
   /** Plaid's detailed category for bank imports; null when typed in. */
   bankCategory: string | null;
+  /** The bank account (card, checking, ...) it came from; null when typed in. */
+  accountId: string | null;
+};
+
+/** A bank account that expenses were imported from. */
+export type Account = {
+  id: string;
+  /** The bank's name, e.g. "Chase". */
+  bank: string | null;
+  name: string;
+  /** Last 4 digits of the account or card number. */
+  mask: string | null;
+  /** Plaid's type and subtype, e.g. "credit" / "credit card". */
+  type: string;
+  subtype: string | null;
 };
 
 export type Sub = { id: string; name: string };
@@ -48,6 +63,10 @@ export type Filters = {
   cats: string[];
   /** `${catId}/${subId}` keys. */
   subs: string[];
+  /** Bank names, plus NO_ACCOUNT_KEY for expenses typed in by hand. */
+  banks: string[];
+  /** Account ids, plus NO_ACCOUNT_KEY for expenses typed in by hand. */
+  accounts: string[];
   status: StatusFilter;
 };
 
@@ -66,6 +85,7 @@ export type DayTotal = { sum: number; n: number };
 export type Snapshot = {
   txns: Txn[];
   cats: Cat[];
+  accounts: Account[];
   settings: Settings;
   widgets: Widget[];
 };

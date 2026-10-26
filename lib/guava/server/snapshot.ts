@@ -18,7 +18,7 @@ export function dateToDb(key: DateKey): Date {
 
 /** Loads everything the app shows from the user's own database. */
 export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
-  const [cats, expenses, settings] = await Promise.all([
+  const [cats, expenses, accounts, settings] = await Promise.all([
     db.category.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: {
@@ -45,6 +45,18 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
         note: true,
         spending: true,
         bankCategory: true,
+        bankAccountId: true,
+      },
+    }),
+    db.bankAccount.findMany({
+      orderBy: [{ institutionName: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        institutionName: true,
+        name: true,
+        mask: true,
+        type: true,
+        subtype: true,
       },
     }),
     db.settings.findUnique({ where: { id: 1 } }),
@@ -52,6 +64,14 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
 
   return {
     cats,
+    accounts: accounts.map((a) => ({
+      id: a.id,
+      bank: a.institutionName,
+      name: a.name,
+      mask: a.mask,
+      type: a.type,
+      subtype: a.subtype,
+    })),
     txns: expenses.map((e) => ({
       id: e.id,
       date: dateFromDb(e.date),
@@ -63,6 +83,7 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
       note: e.note,
       spending: e.spending,
       bankCategory: e.bankCategory,
+      accountId: e.bankAccountId,
     })),
     settings: {
       autoBills: settings?.autoCategorizeBills ?? true,

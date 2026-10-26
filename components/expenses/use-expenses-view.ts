@@ -3,13 +3,21 @@
 import { useMemo, useRef, useState } from "react";
 
 import {
+  bankKey,
   CLEARED_FILTERS,
   DEFAULT_FILTERS,
   DEFAULT_SORT,
   filterTxns,
   matchesDate,
 } from "@/lib/guava/selectors";
-import { useActions, useToday, useTxns } from "@/lib/guava/store";
+import { NO_ACCOUNT_KEY } from "@/lib/guava/accounts";
+import {
+  useAccountById,
+  useAccounts,
+  useActions,
+  useToday,
+  useTxns,
+} from "@/lib/guava/store";
 import type { Filters, Sort, SortKey } from "@/lib/guava/types";
 import { UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
@@ -23,6 +31,12 @@ export function useExpensesView() {
   const txns = useTxns();
   const { setReview } = useActions();
   const today = useToday();
+  const accounts = useAccounts();
+  const accountById = useAccountById();
+  const usedAccounts = useMemo(() => {
+    const used = new Set(txns.map((t) => t.accountId));
+    return accounts.filter((a) => used.has(a.id));
+  }, [txns, accounts]);
 
   const [filters, setFiltersState] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
@@ -31,23 +45,39 @@ export function useExpensesView() {
   const anchor = useRef<string | null>(null);
   const [reviewedLimit, setReviewedLimit] = useState(REVIEWED_PAGE_SIZE);
 
-  const { review, reviewed, catCounts } = useMemo(() => {
-    const list = filterTxns(txns, filters, sort, today);
-    // Like an inbox, expenses that need review show whatever their date, so a
-    // bank import of older transactions can't hide behind the date filter.
-    const undated = filterTxns(txns, { ...filters, date: "all" }, sort, today);
-    const catCounts = new Map<string, number>();
-    for (const t of txns) {
-      if (!matchesDate(t, filters.date, today)) continue;
-      const key = t.catId ?? UNCATEGORIZED_KEY;
-      catCounts.set(key, (catCounts.get(key) ?? 0) + 1);
-    }
-    return {
-      review: undated.filter((t) => t.needsReview),
-      reviewed: list.filter((t) => !t.needsReview),
-      catCounts,
-    };
-  }, [txns, filters, sort, today]);
+  const { review, reviewed, catCounts, bankCounts, accountCounts } =
+    useMemo(() => {
+      const list = filterTxns(txns, filters, sort, today, accountById);
+      // Like an inbox, expenses that need review show whatever their date, so a
+      // bank import of older transactions can't hide behind the date filter.
+      const undated = filterTxns(
+        txns,
+        { ...filters, date: "all" },
+        sort,
+        today,
+        accountById,
+      );
+      // Counts shown next to each filter option, within the date range.
+      const catCounts = new Map<string, number>();
+      const bankCounts = new Map<string, number>();
+      const accountCounts = new Map<string, number>();
+      const bump = (m: Map<string, number>, key: string) =>
+        m.set(key, (m.get(key) ?? 0) + 1);
+      for (const t of txns) {
+        if (!matchesDate(t, filters.date, today)) continue;
+        const account = t.accountId ? accountById.get(t.accountId) : undefined;
+        bump(catCounts, t.catId ?? UNCATEGORIZED_KEY);
+        bump(bankCounts, bankKey(account));
+        bump(accountCounts, account?.id ?? NO_ACCOUNT_KEY);
+      }
+      return {
+        review: undated.filter((t) => t.needsReview),
+        reviewed: list.filter((t) => !t.needsReview),
+        catCounts,
+        bankCounts,
+        accountCounts,
+      };
+    }, [txns, filters, sort, today, accountById]);
 
   const showReview = filters.status !== "reviewed";
   const showReviewed = filters.status !== "review";
@@ -76,6 +106,12 @@ export function useExpensesView() {
     showReview,
     showReviewed,
     catCounts,
+    bankCounts,
+    accountCounts,
+    /** The Bank, Card and Last 4 columns show once a bank was connected. */
+    showAccounts: accounts.length > 0,
+    /** Accounts with at least one expense (a mortgage or 401k may have none). */
+    usedAccounts,
     selected,
     selectedSet,
     allSelected,

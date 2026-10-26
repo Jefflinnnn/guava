@@ -5,8 +5,10 @@ import {
   monthIndex,
   monthOf,
 } from "./dates";
+import { bankName, NO_ACCOUNT_KEY } from "./accounts";
 import { filterAmountToCents } from "./money-input";
 import type {
+  Account,
   Cat,
   DateKey,
   DayTotal,
@@ -159,6 +161,8 @@ export const DEFAULT_FILTERS: Filters = {
   max: "",
   cats: [],
   subs: [],
+  banks: [],
+  accounts: [],
   status: "all",
 };
 export const CLEARED_FILTERS: Filters = {
@@ -168,6 +172,8 @@ export const CLEARED_FILTERS: Filters = {
   max: "",
   cats: [],
   subs: [],
+  banks: [],
+  accounts: [],
   status: "all",
 };
 export const DEFAULT_SORT: Sort = { key: "date", dir: -1 };
@@ -197,13 +203,21 @@ export function matchesDate(
   return t.date >= addDays(today, -days + 1);
 }
 
+/** The Bank filter's key for an expense's account (or none). */
+export function bankKey(a: Account | undefined): string {
+  return a ? bankName(a) : NO_ACCOUNT_KEY;
+}
+
 /** Applies every filter except status (sections split on that), then sorts. */
 export function filterTxns(
   txns: Txn[],
   f: Filters,
   sort: Sort,
   today: DateKey,
+  accountById: Map<string, Account>,
 ): Txn[] {
+  const accountOf = (t: Txn) =>
+    t.accountId ? accountById.get(t.accountId) : undefined;
   const q = f.q.trim().toLowerCase();
   const min = filterAmountToCents(f.min);
   const max = filterAmountToCents(f.max);
@@ -214,7 +228,10 @@ export function filterTxns(
       (isNaN(min) || t.amountCents >= min) &&
       (isNaN(max) || t.amountCents <= max) &&
       (!f.cats.length || f.cats.includes(t.catId ?? UNCATEGORIZED_KEY)) &&
-      (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`)),
+      (!f.subs.length || f.subs.includes(`${t.catId}/${t.subId}`)) &&
+      (!f.banks.length || f.banks.includes(bankKey(accountOf(t)))) &&
+      (!f.accounts.length ||
+        f.accounts.includes(accountOf(t)?.id ?? NO_ACCOUNT_KEY)),
   );
   return list.sort((a, b) => {
     const v =

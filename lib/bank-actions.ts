@@ -160,6 +160,7 @@ export async function connectBank(
     });
     for (const a of accountsData.accounts) {
       const fields = {
+        institutionName: institution,
         name: a.name,
         mask: a.mask,
         type: a.type,
@@ -250,8 +251,8 @@ export async function reconnectBank(
 
 /**
  * Disconnects a bank: Plaid stops access (and billing) for it, and its saved
- * connection and accounts are deleted. Expenses imported from it stay; they
- * just stop updating.
+ * connection is deleted. Its accounts and imported expenses stay, so the
+ * expenses still show their bank and card; they just stop updating.
  */
 export async function disconnectBank(
   id: unknown,
