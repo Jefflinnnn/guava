@@ -42,7 +42,7 @@ export function ExpenseTable({
         cat={t.catId ? catById.get(t.catId) : undefined}
         variant={variant}
         selected={view.selectedSet.has(t.id)}
-        onSelectedChange={(on) => view.toggleSelected(t.id, on)}
+        onSelectedChange={(on, range) => view.toggleSelected(t.id, on, range)}
         onOpen={() => onOpen(t)}
         onToggleReview={() =>
           view.setNeedsReview([t.id], variant === "reviewed")

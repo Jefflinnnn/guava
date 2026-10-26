@@ -35,7 +35,8 @@ export function ExpenseRow({
   cat: Cat | undefined;
   variant: ExpenseRowVariant;
   selected: boolean;
-  onSelectedChange: (on: boolean) => void;
+  /** `range` is true for a shift-click, which selects the rows in between. */
+  onSelectedChange: (on: boolean, range: boolean) => void;
   onOpen: () => void;
   onToggleReview: () => void;
 }) {
@@ -82,7 +83,11 @@ export function ExpenseRow({
         <Checkbox
           aria-label={`Select ${txn.name}`}
           checked={selected}
-          onCheckedChange={(v) => onSelectedChange(v === true)}
+          // onClick rather than onCheckedChange, to see the shift key. Space
+          // on the focused checkbox clicks it too.
+          onClick={(e) => onSelectedChange(!selected, e.shiftKey)}
+          // Keeps shift-click from also selecting the page's text.
+          onMouseDown={(e) => e.shiftKey && e.preventDefault()}
         />
       </div>
 
