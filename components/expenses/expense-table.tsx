@@ -4,7 +4,6 @@ import { Check, CircleCheck, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { canMarkReviewed } from "@/lib/guava/spending";
 import { useAccountById, useCatById, useReviewCount } from "@/lib/guava/store";
 import { daysLeft, TRASH_DAYS } from "@/lib/guava/trash";
 import type { DeletedTxn, Txn } from "@/lib/guava/types";
@@ -12,7 +11,6 @@ import type { DeletedTxn, Txn } from "@/lib/guava/types";
 import { ExpenseRow, type ExpenseRowVariant } from "./expense-row";
 import {
   ReviewDot,
-  SectionAction,
   SectionFooter,
   SectionHeader,
   SectionMessage,
@@ -83,22 +81,6 @@ export function ExpenseTable({
               count={review.length}
               collapsed={view.collapsed.review}
               onToggle={() => view.toggleCollapsed("review")}
-              action={
-                // Uncategorized spending can't be marked reviewed.
-                !view.collapsed.review &&
-                review.some(canMarkReviewed) && (
-                  <SectionAction
-                    onClick={() =>
-                      view.setNeedsReview(
-                        review.map((t) => t.id),
-                        false,
-                      )
-                    }
-                  >
-                    Mark all reviewed
-                  </SectionAction>
-                )
-              }
             />
             {!view.collapsed.review && rows(review, "review")}
             {!view.collapsed.review && review.length === 0 && (

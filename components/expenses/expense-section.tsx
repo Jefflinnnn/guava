@@ -1,6 +1,5 @@
 import { ChevronDown } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,7 +11,6 @@ export function SectionHeader({
   marker,
   title,
   count,
-  action,
   collapsed = false,
   onToggle,
 }: {
@@ -20,7 +18,6 @@ export function SectionHeader({
   marker: React.ReactNode;
   title: string;
   count: number;
-  action?: React.ReactNode;
   collapsed?: boolean;
   onToggle?: () => void;
 }) {
@@ -52,7 +49,6 @@ export function SectionHeader({
       ) : (
         label
       )}
-      {action && <div className="ml-auto normal-case">{action}</div>}
     </div>
   );
 }
@@ -63,18 +59,6 @@ export function ReviewDot({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn("size-2 flex-none rounded-full bg-pink", className)}
-    />
-  );
-}
-
-/** A small outline button for a section header ("Mark all reviewed"). */
-export function SectionAction(props: React.ComponentProps<typeof Button>) {
-  return (
-    <Button
-      variant="outline"
-      size="xs"
-      className="h-[26px] px-2.5 tracking-normal shadow-none"
-      {...props}
     />
   );
 }
