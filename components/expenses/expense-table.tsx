@@ -4,7 +4,6 @@ import { Check, CircleCheck, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { canMarkReviewed } from "@/lib/guava/spending";
 import { useAccountById, useCatById, useReviewCount } from "@/lib/guava/store";
 import { daysLeft, TRASH_DAYS } from "@/lib/guava/trash";
 import type { DeletedTxn, Txn } from "@/lib/guava/types";
@@ -12,7 +11,6 @@ import type { DeletedTxn, Txn } from "@/lib/guava/types";
 import { ExpenseRow, type ExpenseRowVariant } from "./expense-row";
 import {
   ReviewDot,
-  SectionAction,
   SectionFooter,
   SectionHeader,
   SectionMessage,
@@ -65,7 +63,11 @@ export function ExpenseTable({
   const { review, reviewed, reviewedShown } = view;
 
   return (
-    <Card className="overflow-x-auto">
+    // The page scrolls, not the card, so the column and section headers can
+    // stick to it. overflow-clip rounds the corners without making the card a
+    // scroll area, and min-w-fit widens it (and scrolls the page sideways)
+    // when the window is too narrow for the table.
+    <Card className="min-w-fit overflow-clip">
       <div
         className={TABLE_MIN_WIDTH[view.showAccounts ? "accounts" : "plain"]}
       >
@@ -77,24 +79,11 @@ export function ExpenseTable({
               marker={<ReviewDot />}
               title="Needs review"
               count={review.length}
-              action={
-                // Uncategorized spending can't be marked reviewed.
-                review.some(canMarkReviewed) && (
-                  <SectionAction
-                    onClick={() =>
-                      view.setNeedsReview(
-                        review.map((t) => t.id),
-                        false,
-                      )
-                    }
-                  >
-                    Mark all reviewed
-                  </SectionAction>
-                )
-              }
+              collapsed={view.collapsed.review}
+              onToggle={() => view.toggleCollapsed("review")}
             />
-            {rows(review, "review")}
-            {review.length === 0 && (
+            {!view.collapsed.review && rows(review, "review")}
+            {!view.collapsed.review && review.length === 0 && (
               <SectionMessage icon={<CircleCheck />}>
                 {reviewCount
                   ? "No expenses that need review match these filters."
@@ -124,26 +113,30 @@ export function ExpenseTable({
               marker={<Check className="size-3.5 text-ink-3" />}
               title="Reviewed"
               count={reviewed.length}
+              collapsed={view.collapsed.reviewed}
+              onToggle={() => view.toggleCollapsed("reviewed")}
             />
-            {rows(reviewedShown, "reviewed")}
-            <SectionFooter
-              action={
-                reviewedShown.length < reviewed.length && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={view.showMoreReviewed}
-                  >
-                    Show more
-                  </Button>
-                )
-              }
-            >
-              {reviewed.length
-                ? `Showing ${reviewedShown.length} of ${reviewed.length} reviewed`
-                : "No reviewed expenses match these filters"}
-            </SectionFooter>
+            {!view.collapsed.reviewed && rows(reviewedShown, "reviewed")}
+            {!view.collapsed.reviewed && (
+              <SectionFooter
+                action={
+                  reviewedShown.length < reviewed.length && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      onClick={view.showMoreReviewed}
+                    >
+                      Show more
+                    </Button>
+                  )
+                }
+              >
+                {reviewed.length
+                  ? `Showing ${reviewedShown.length} of ${reviewed.length} reviewed`
+                  : "No reviewed expenses match these filters"}
+              </SectionFooter>
+            )}
           </section>
         )}
         {!view.showDeleted && view.deletedCount > 0 && (
