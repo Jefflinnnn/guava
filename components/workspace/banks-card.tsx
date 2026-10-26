@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { usePlaidLink, type PlaidLinkOnSuccess } from "react-plaid-link";
 import { Landmark, Loader2, RefreshCw } from "lucide-react";
 
+import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   connectBank,
   createLinkToken,
+  disconnectBank,
+  reconnectBank,
   syncBanks,
   type BankResult,
 } from "@/lib/bank-actions";
@@ -21,6 +24,13 @@ const FAILED = {
   ok: false,
   error: "Something went wrong. Try again.",
 } as const;
+
+/** What a sync, connect or reconnect returns on success. */
+type SyncResult = SyncCounts & {
+  institution?: string;
+  /** Banks skipped because they need the user to sign in again. */
+  loginRequired?: string[];
+};
 
 function summary({ added, updated, removed }: SyncCounts): string {
   if (!added && !updated && !removed) return "Up to date. No new transactions.";
@@ -35,61 +45,106 @@ function summary({ added, updated, removed }: SyncCounts): string {
 
 /**
  * Banks linked through Plaid (with the user's own keys): "Connect a bank"
- * opens Plaid Link, "Sync now" pulls new transactions into Expenses.
+ * opens Plaid Link, "Sync now" pulls new transactions into Expenses, and each
+ * bank can be reconnected (when it asks for sign-in again) or disconnected.
  */
 export function BanksCard({ banks }: { banks: BankDetails[] }) {
   const router = useRouter();
   const { reload } = useActions();
-  const [linkToken, setLinkToken] = useState<string | null>(null);
+  // The open Link session: a new connection, or update mode for a saved bank.
+  const [link, setLink] = useState<{
+    token: string;
+    reconnectId: string | null;
+  } | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
+  const [disconnecting, setDisconnecting] = useState<BankDetails | null>(null);
   const [isBusy, startBusy] = useTransition();
 
+  const refresh = useCallback(async () => {
+    await reload().catch(() => {});
+    router.refresh();
+  }, [reload, router]);
+
   const finish = useCallback(
-    async (result: BankResult<SyncCounts & { institution?: string }>) => {
+    async (result: BankResult<SyncResult>, verb = "Connected") => {
       if (!result.ok) {
         setMessage({ ok: false, text: result.error });
         return;
       }
-      const done = summary(result);
+      const relogin = result.loginRequired?.length
+        ? `${result.loginRequired.join(", ")} needs you to sign in again: use Reconnect below.`
+        : "";
+      const changed = result.added || result.updated || result.removed;
+      // "Up to date" would be wrong when banks were skipped.
+      const done = changed || !relogin ? summary(result) : "";
       setMessage({
-        ok: true,
-        text: result.institution
-          ? `Connected ${result.institution}. ${done}`
-          : done,
+        ok: !relogin,
+        text: [
+          result.institution && `${verb} ${result.institution}.`,
+          done,
+          relogin,
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
-      await reload().catch(() => {});
-      router.refresh();
+      await refresh();
     },
-    [reload, router],
+    [refresh],
   );
 
   const onSuccess = useCallback<PlaidLinkOnSuccess>(
     (publicToken) => {
-      setLinkToken(null);
+      const reconnectId = link?.reconnectId ?? null;
+      setLink(null);
       startBusy(async () => {
-        await finish(await connectBank(publicToken).catch(() => FAILED));
+        await finish(
+          reconnectId
+            ? await reconnectBank(reconnectId).catch(() => FAILED)
+            : await connectBank(publicToken).catch(() => FAILED),
+          reconnectId ? "Reconnected" : "Connected",
+        );
       });
     },
-    [finish],
+    [finish, link],
   );
   const { open, ready } = usePlaidLink({
-    token: linkToken,
+    token: link?.token ?? null,
     onSuccess,
-    onExit: () => setLinkToken(null),
+    onExit: () => setLink(null),
   });
   // Open Link as soon as its token arrives.
   useEffect(() => {
-    if (linkToken && ready) open();
-  }, [linkToken, ready, open]);
+    if (link && ready) open();
+  }, [link, ready, open]);
 
-  function connect() {
+  /** Opens Link: a new bank, or `reconnectId`'s bank in update mode. */
+  function openLink(reconnectId: string | null) {
     setMessage(null);
     startBusy(async () => {
-      const result = await createLinkToken().catch(() => FAILED);
-      if (result.ok) setLinkToken(result.linkToken);
+      const result = await (
+        reconnectId ? createLinkToken(reconnectId) : createLinkToken()
+      ).catch(() => FAILED);
+      if (result.ok) setLink({ token: result.linkToken, reconnectId });
       else setMessage({ ok: false, text: result.error });
+    });
+  }
+
+  function disconnect(bank: BankDetails) {
+    setDisconnecting(null);
+    setMessage(null);
+    startBusy(async () => {
+      const result = await disconnectBank(bank.id).catch(() => FAILED);
+      if (!result.ok) {
+        setMessage({ ok: false, text: result.error });
+        return;
+      }
+      setMessage({
+        ok: true,
+        text: `Disconnected ${result.institution}. Its imported expenses are still in Expenses.`,
+      });
+      await refresh();
     });
   }
 
@@ -148,7 +203,7 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
           size="sm"
           className="h-8 px-3"
           disabled={isBusy}
-          onClick={connect}
+          onClick={() => openLink(null)}
         >
           {isBusy && !banks.length ? (
             <Loader2 data-icon="inline-start" className="animate-spin" />
@@ -180,22 +235,75 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
         ) : (
           <ul className="divide-y divide-muted">
             {banks.map((b) => (
-              <li key={b.id} className="py-2.5 first:pt-0 last:pb-0">
-                <p className="truncate font-medium">{b.institution}</p>
-                <ul className="mt-0.5 text-[13px] text-ink-3">
-                  {b.accounts.map((a) => (
-                    <li key={a.id} className="truncate">
-                      {a.name}
-                      {a.mask ? ` ••${a.mask}` : ""}
-                      {a.subtype ? ` · ${a.subtype}` : ""}
-                    </li>
-                  ))}
-                </ul>
+              <li
+                key={b.id}
+                className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 font-medium">
+                    <span className="truncate">{b.institution}</span>
+                    {b.loginRequired && (
+                      <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-danger-soft px-2 text-xs font-medium text-danger">
+                        Sign-in needed
+                      </span>
+                    )}
+                  </p>
+                  <ul className="mt-0.5 text-[13px] text-ink-3">
+                    {b.accounts.map((a) => (
+                      <li key={a.id} className="truncate">
+                        {a.name}
+                        {a.mask ? ` ••${a.mask}` : ""}
+                        {a.subtype ? ` · ${a.subtype}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {b.loginRequired && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 px-2.5"
+                    disabled={isBusy}
+                    onClick={() => openLink(b.id)}
+                  >
+                    Reconnect
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-ink-3"
+                  disabled={isBusy}
+                  onClick={() => setDisconnecting(b)}
+                >
+                  Disconnect
+                </Button>
               </li>
             ))}
           </ul>
         )}
       </div>
+      {disconnecting && (
+        <ConfirmDeleteDialog
+          open
+          onOpenChange={(open) => !open && setDisconnecting(null)}
+          title={`Disconnect ${disconnecting.institution}?`}
+          description={
+            <>
+              guava stops syncing {disconnecting.institution} and forgets its
+              accounts.{" "}
+              {disconnecting.expenseCount
+                ? `The ${plural(disconnecting.expenseCount, "expense")} already imported stay in Expenses.`
+                : "Nothing was imported from it yet."}{" "}
+              Connecting it again later imports its history again, as new
+              expenses.
+            </>
+          }
+          confirmLabel="Disconnect"
+          onConfirm={() => disconnect(disconnecting)}
+        />
+      )}
     </section>
   );
 }

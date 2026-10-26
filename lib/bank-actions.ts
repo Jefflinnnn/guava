@@ -3,7 +3,7 @@
 import type { AccountBase } from "plaid";
 
 import { getCurrentUserId } from "@/lib/current-user";
-import { encrypt } from "@/lib/crypto";
+import { decrypt, encrypt } from "@/lib/crypto";
 import {
   logPlaidError,
   NoPlaidKeysError,
@@ -36,19 +36,44 @@ function failure(label: string, error: unknown): { ok: false; error: string } {
   return { ok: false, error: "Plaid didn’t respond. Try again." };
 }
 
-/** Step 1 of Plaid Link: a short-lived token that opens the Link modal. */
-export async function createLinkToken(): Promise<
-  BankResult<{ linkToken: string }>
-> {
+/** A saved bank connection's id (a cuid), as sent from the browser. */
+function itemId(v: unknown): string {
+  if (typeof v !== "string" || !/^[a-z0-9]{1,40}$/i.test(v)) {
+    throw new Error("Invalid bank id.");
+  }
+  return v;
+}
+
+/**
+ * Step 1 of Plaid Link: a short-lived token that opens the Link modal. With
+ * a saved bank's id it opens Link's update mode instead, where the user signs
+ * in to that bank again and keeps the same connection.
+ */
+export async function createLinkToken(
+  reconnectId?: unknown,
+): Promise<BankResult<{ linkToken: string }>> {
   try {
     const userId = await getCurrentUserId();
-    const plaid = await userPlaidClient(await getUserDb());
+    const db = await getUserDb();
+    const plaid = await userPlaidClient(db);
+    const update =
+      reconnectId === undefined
+        ? null
+        : await db.plaidItem.findUnique({
+            where: { id: itemId(reconnectId) },
+            select: { accessToken: true },
+          });
+    if (reconnectId !== undefined && !update) {
+      return { ok: false, error: "That bank isn’t connected any more." };
+    }
     const { data } = await plaid.linkTokenCreate({
       user: { client_user_id: userId },
       client_name: "guava",
-      products: PLAID_PRODUCTS,
       country_codes: PLAID_COUNTRY_CODES,
       language: "en",
+      ...(update
+        ? { access_token: decrypt(update.accessToken) }
+        : { products: PLAID_PRODUCTS }),
     });
     return { ok: true, linkToken: data.link_token };
   } catch (error) {
@@ -154,21 +179,103 @@ export async function connectBank(
   }
 }
 
-/** "Sync now": pulls new and changed transactions from every connected bank. */
-export async function syncBanks(): Promise<BankResult<SyncCounts>> {
+/**
+ * "Sync now": pulls new and changed transactions from every connected bank.
+ * A bank that asks the user to sign in again is flagged and skipped (until
+ * it's reconnected) instead of failing the whole sync.
+ */
+export async function syncBanks(): Promise<
+  BankResult<SyncCounts & { loginRequired: string[] }>
+> {
   try {
     const db = await getUserDb();
     const plaid = await userPlaidClient(db);
-    const items = await db.plaidItem.findMany({ select: { id: true } });
+    const items = await db.plaidItem.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, institutionName: true, loginRequired: true },
+    });
     const total: SyncCounts = { added: 0, updated: 0, removed: 0 };
-    for (const { id } of items) {
-      const counts = await syncItem(db, plaid, id);
-      total.added += counts.added;
-      total.updated += counts.updated;
-      total.removed += counts.removed;
+    const loginRequired: string[] = [];
+    for (const item of items) {
+      const name = item.institutionName ?? "A bank";
+      if (item.loginRequired) {
+        loginRequired.push(name);
+        continue;
+      }
+      try {
+        const counts = await syncItem(db, plaid, item.id);
+        total.added += counts.added;
+        total.updated += counts.updated;
+        total.removed += counts.removed;
+      } catch (error) {
+        if (plaidErrorCode(error) !== "ITEM_LOGIN_REQUIRED") throw error;
+        await db.plaidItem.update({
+          where: { id: item.id },
+          data: { loginRequired: true },
+        });
+        loginRequired.push(name);
+      }
     }
-    return { ok: true, ...total };
+    return { ok: true, ...total, loginRequired };
   } catch (error) {
     return failure("Bank sync failed", error);
+  }
+}
+
+/**
+ * After the user signed in again through Link's update mode: clears the flag
+ * and catches up on what was missed.
+ */
+export async function reconnectBank(
+  id: unknown,
+): Promise<BankResult<SyncCounts & { institution: string }>> {
+  try {
+    const db = await getUserDb();
+    const plaid = await userPlaidClient(db);
+    const item = await db.plaidItem.update({
+      where: { id: itemId(id) },
+      data: { loginRequired: false },
+      select: { id: true, institutionName: true },
+    });
+    const counts = await syncItem(db, plaid, item.id);
+    return {
+      ok: true,
+      institution: item.institutionName ?? "Your bank",
+      ...counts,
+    };
+  } catch (error) {
+    return failure("Reconnecting a bank failed", error);
+  }
+}
+
+/**
+ * Disconnects a bank: Plaid stops access (and billing) for it, and its saved
+ * connection and accounts are deleted. Expenses imported from it stay; they
+ * just stop updating.
+ */
+export async function disconnectBank(
+  id: unknown,
+): Promise<BankResult<{ institution: string }>> {
+  try {
+    const db = await getUserDb();
+    const item = await db.plaidItem.findUnique({
+      where: { id: itemId(id) },
+      select: { id: true, accessToken: true, institutionName: true },
+    });
+    if (!item) return { ok: true, institution: "The bank" };
+    const plaid = await userPlaidClient(db);
+    try {
+      await plaid.itemRemove({ access_token: decrypt(item.accessToken) });
+    } catch (error) {
+      // Plaid may already consider it gone (expired, or removed from the
+      // Plaid dashboard); delete the local connection either way.
+      if (plaidErrorCode(error) !== "ITEM_NOT_FOUND") {
+        logPlaidError("Plaid item remove failed", error);
+      }
+    }
+    await db.plaidItem.delete({ where: { id: item.id } });
+    return { ok: true, institution: item.institutionName ?? "The bank" };
+  } catch (error) {
+    return failure("Disconnecting a bank failed", error);
   }
 }
