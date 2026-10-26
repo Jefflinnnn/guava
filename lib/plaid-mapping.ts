@@ -16,8 +16,11 @@ const NAME_MAX = 40;
  */
 const NOT_SPENDING = new Set(["TRANSFER_IN", "TRANSFER_OUT", "LOAN_PAYMENTS"]);
 
+/** Money in that isn't a refund. Income tracking is a later feature. */
+const INCOME = "INCOME";
+
 /** Why a transaction wasn't imported, or null when it was. */
-export type SkipReason = "money-in" | "transfer" | "too-large";
+export type SkipReason = "income" | "transfer" | "zero" | "too-large";
 
 export type ImportedExpense = {
   plaidTransactionId: string;
@@ -26,14 +29,16 @@ export type ImportedExpense = {
   replacesPendingId: string | null;
   date: DateKey;
   name: string;
+  /** Positive for spending, negative for a refund. */
   amountCents: number;
 };
 
 /**
  * Maps one Plaid transaction to an expense, or says why it's skipped.
  *
- * - Plaid amounts are dollars, positive for money out. Money in (refunds,
- *   income, a friend paying you back) is skipped for now.
+ * - Plaid amounts are dollars, positive for money out. Money back from a
+ *   merchant is a refund: a negative expense, so totals net out. Income is
+ *   skipped for now.
  * - Transfers and loan or card payments are skipped (see `NOT_SPENDING`).
  * - The merchant name is preferred over the raw bank description.
  * - `date` is when the bank posted it, which matches statements.
@@ -54,8 +59,10 @@ export function mapTransaction(
   const category = t.personal_finance_category?.primary;
   if (category && NOT_SPENDING.has(category)) return "transfer";
   const amountCents = Math.round(t.amount * 100);
-  if (amountCents <= 0) return "money-in";
-  if (amountCents > EXPENSE_CAP_CENTS) return "too-large";
+  if (amountCents < 0 && category === INCOME) return "income";
+  // Zero-amount rows (authorizations, adjustments) carry no spending.
+  if (amountCents === 0) return "zero";
+  if (Math.abs(amountCents) > EXPENSE_CAP_CENTS) return "too-large";
   return {
     plaidTransactionId: t.transaction_id,
     plaidAccountId: t.account_id,

@@ -5,7 +5,7 @@ import { Trash2 } from "lucide-react";
 import { ProgressBar } from "@/components/guava/progress-bar";
 import { Button } from "@/components/ui/button";
 import { money0Fit, percent, plural } from "@/lib/guava/format";
-import type { SubStat } from "@/lib/guava/selectors";
+import { shareOf, type SubStat } from "@/lib/guava/selectors";
 
 import { pressable } from "./pressable";
 
@@ -26,7 +26,7 @@ export function SubcategoryRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const share = categorySpent ? spent / categorySpent : 0;
+  const share = shareOf(spent, categorySpent);
   return (
     <div
       {...pressable(onEdit)}

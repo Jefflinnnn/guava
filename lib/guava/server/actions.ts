@@ -45,6 +45,12 @@ function cents(v: unknown, min: number, max: number): number {
     : fail("Invalid amount.");
 }
 
+/** An expense amount: positive for spending, negative for a refund. */
+function expenseCents(v: unknown): number {
+  const c = cents(v, -EXPENSE_CAP_CENTS, EXPENSE_CAP_CENTS);
+  return c === 0 ? fail("Invalid amount.") : c;
+}
+
 function bool(v: unknown): boolean {
   return typeof v === "boolean" ? v : fail("Invalid flag.");
 }
@@ -86,7 +92,7 @@ async function expenseData(db: UserDb, input: ExpenseInput) {
   return {
     date: dateToDb(date),
     name: text(input.name, 40, "name"),
-    amountCents: cents(input.amountCents, 1, EXPENSE_CAP_CENTS),
+    amountCents: expenseCents(input.amountCents),
     categoryId,
     subcategoryId,
     needsReview: bool(input.needsReview) || !categoryId,

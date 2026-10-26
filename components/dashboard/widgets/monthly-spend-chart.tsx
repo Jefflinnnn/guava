@@ -46,7 +46,9 @@ export function MonthlySpendWidget() {
   const maxV =
     Math.ceil((Math.max(...months.map((m) => m.total)) * 1.1) / Y_STEP) *
       Y_STEP || Y_STEP;
-  const y = (v: number) => PAD.t + (1 - v / maxV) * (H - PAD.t - PAD.b);
+  // A month that's net negative (more refunds than spending) sits on the axis.
+  const y = (v: number) =>
+    PAD.t + (1 - Math.max(0, v) / maxV) * (H - PAD.t - PAD.b);
   const pts = visible.map((m, i) => [x(i), y(m.total)] as const);
   const partialAt = visible.findIndex((m) => m.partial);
   const solid = partialAt >= 1 ? pts.slice(0, partialAt) : pts;

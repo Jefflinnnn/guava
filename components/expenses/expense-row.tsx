@@ -94,7 +94,9 @@ export function ExpenseRow({
         <span className="truncate">{txn.name}</span>
       </div>
 
-      <span className="tabular">{money(txn.amountCents)}</span>
+      <span className={cn("tabular", txn.amountCents < 0 && "text-success")}>
+        {money(txn.amountCents)}
+      </span>
 
       <CategoryTag
         color={color}
