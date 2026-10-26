@@ -11,14 +11,26 @@ export function bankName(a: Account): string {
   return a.bank ?? "Bank";
 }
 
-/** "Credit Card ••3333": tells apart same-named cards in lists. */
-export function accountLabel(a: Account): string {
-  return a.mask ? `${a.name} ••${a.mask}` : a.name;
+/** The user's nickname for the account, or else the bank's name for it. */
+export function accountName(a: Pick<Account, "name" | "nickname">): string {
+  return a.nickname ?? a.name;
 }
 
-/** Hover text: the full name, the kind of account and the last 4. */
+/** "Chase Freedom ••3333": tells apart same-named cards in lists. */
+export function accountLabel(a: Account): string {
+  return a.mask ? `${accountName(a)} ••${a.mask}` : accountName(a);
+}
+
+/**
+ * Hover text: the name (and the bank's own name, if renamed), the kind of
+ * account and the last 4.
+ */
 export function accountTitle(a: Account): string {
-  return [a.name, a.subtype ?? a.type, a.mask && `••${a.mask}`]
+  return [
+    a.nickname ? `${a.nickname} (${a.name})` : a.name,
+    a.subtype ?? a.type,
+    a.mask && `••${a.mask}`,
+  ]
     .filter(Boolean)
     .join(" · ");
 }

@@ -133,7 +133,11 @@ model BankAccount {
   // Copied from the PlaidItem, since the item is gone after a disconnect.
   institutionName String?
   plaidAccountId  String     @unique
+  // The bank's name for the account, e.g. "Credit Card".
   name            String
+  // The user's own name for it, e.g. "Chase Freedom"; shown instead of
+  // `name` when set. Syncing never changes it.
+  nickname        String?    @db.VarChar(40)
   // Last 4 digits of the account or card number.
   mask            String?
   type            String

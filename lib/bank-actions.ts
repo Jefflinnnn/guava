@@ -280,3 +280,33 @@ export async function disconnectBank(
     return failure("Disconnecting a bank failed", error);
   }
 }
+
+/** Longest account nickname (BankAccount.nickname is VARCHAR(40)). */
+const NICKNAME_MAX = 40;
+
+/**
+ * Renames a bank account (e.g. "Credit Card" to "Chase Freedom"). An empty
+ * name goes back to the bank's own. Syncing never changes the nickname.
+ */
+export async function renameBankAccount(
+  id: unknown,
+  nickname: unknown,
+): Promise<BankResult<{ name: string }>> {
+  const name = typeof nickname === "string" ? nickname.trim() : "";
+  if (typeof id !== "string" || !/^[a-z0-9]{1,40}$/i.test(id)) {
+    return { ok: false, error: "That account wasn’t found." };
+  }
+  if (name.length > NICKNAME_MAX) {
+    return {
+      ok: false,
+      error: `Names can be up to ${NICKNAME_MAX} characters.`,
+    };
+  }
+  const db = await getUserDb();
+  const { count } = await db.bankAccount.updateMany({
+    where: { id },
+    data: { nickname: name || null },
+  });
+  if (!count) return { ok: false, error: "That account wasn’t found." };
+  return { ok: true, name };
+}

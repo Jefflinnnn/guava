@@ -102,7 +102,10 @@ export type BankDetails = {
   expenseCount: number;
   accounts: {
     id: string;
+    /** The bank's name for the account. */
     name: string;
+    /** The user's name for it, shown instead when set. */
+    nickname: string | null;
     mask: string | null;
     subtype: string | null;
   }[];
@@ -122,6 +125,7 @@ export async function loadBanks(db: UserDb): Promise<BankDetails[]> {
         select: {
           id: true,
           name: true,
+          nickname: true,
           mask: true,
           subtype: true,
           _count: { select: { expenses: true } },
@@ -138,6 +142,7 @@ export async function loadBanks(db: UserDb): Promise<BankDetails[]> {
     accounts: i.accounts.map((a) => ({
       id: a.id,
       name: a.name,
+      nickname: a.nickname,
       mask: a.mask,
       subtype: a.subtype,
     })),
