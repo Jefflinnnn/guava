@@ -12,7 +12,10 @@ import m0009 from "./0009_bank_login_required";
 import m0010 from "./0010_deleted_bank_transactions";
 import m0011 from "./0011_bank_account_details";
 
-export const USER_DB_MIGRATIONS: { name: string; migration: UserDbMigration }[] = [
+export const USER_DB_MIGRATIONS: {
+  name: string;
+  migration: UserDbMigration;
+}[] = [
   { name: "0001_init", migration: m0001 },
   { name: "0002_expenses_and_categories", migration: m0002 },
   { name: "0003_remove_budgets", migration: m0003 },

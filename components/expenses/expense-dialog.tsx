@@ -310,16 +310,22 @@ function ExpensePreview({
   source?: string;
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-[10px] border border-muted bg-surface p-3.5">
+    // min-w-0: a long bank and card line truncates instead of widening the
+    // dialog's grid.
+    <div className="flex min-w-0 items-center gap-3.5 rounded-[10px] border border-muted bg-surface p-3.5">
       <InitialAvatar name={name} size={40} className="bg-card" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold">
           {name.trim() || "Untitled expense"}
         </div>
-        <div className="truncate text-xs text-ink-3" title={source}>
+        <div className="text-xs text-ink-3">
           {isDateKey(date) ? formatLongDate(date) : "No date"}
-          {source && ` · ${source}`}
         </div>
+        {source && (
+          <div className="truncate text-xs text-ink-3" title={source}>
+            {source}
+          </div>
+        )}
       </div>
       <div
         className={cn(

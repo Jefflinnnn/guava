@@ -26,7 +26,7 @@ export function ExpensesScreen() {
   });
 
   return (
-    <Page>
+    <Page width="full">
       <PageHeader
         title="Expenses"
         subtitle={`${reviewCount} need review · ${txns.length} total transactions`}

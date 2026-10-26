@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 
 const WIDTHS = {
+  /** Wide tables (Expenses): the whole content area. */
+  full: "max-w-none",
   wide: "max-w-[1320px]",
   medium: "max-w-[880px]",
   narrow: "max-w-[720px]",

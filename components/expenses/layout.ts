@@ -10,7 +10,7 @@ export const EXPENSE_GRID = {
   plain:
     "grid grid-cols-[40px_104px_minmax(130px,1fr)_100px_140px_132px_124px_44px] items-center",
   accounts:
-    "grid grid-cols-[40px_104px_minmax(130px,1fr)_112px_150px_72px_100px_140px_132px_124px_44px] items-center",
+    "grid grid-cols-[40px_104px_minmax(130px,2fr)_minmax(112px,1fr)_minmax(150px,1fr)_72px_100px_140px_132px_124px_44px] items-center",
 };
 
 /** Below this width the table scrolls horizontally inside its card. */
