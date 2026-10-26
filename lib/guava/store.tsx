@@ -57,7 +57,7 @@ export type SubDraft = Omit<Sub, "id"> & { id: string | null };
 type Action =
   | { type: "setMonth"; month: Month }
   | { type: "upsertTxn"; txn: Txn; isNew: boolean }
-  | { type: "deleteTxn"; id: string }
+  | { type: "deleteTxns"; ids: string[] }
   | { type: "setReview"; ids: string[]; needsReview: boolean }
   | { type: "upsertCat"; cat: Omit<Cat, "subs">; isNew: boolean }
   | { type: "deleteCat"; id: string; moveTo: string | null }
@@ -80,8 +80,10 @@ function reducer(s: State, a: Action): State {
             ...s,
             txns: s.txns.map((t) => (t.id === a.txn.id ? a.txn : t)),
           };
-    case "deleteTxn":
-      return { ...s, txns: s.txns.filter((t) => t.id !== a.id) };
+    case "deleteTxns": {
+      const ids = new Set(a.ids);
+      return { ...s, txns: s.txns.filter((t) => !ids.has(t.id)) };
+    }
     case "setReview": {
       const ids = new Set(a.ids);
       return {
@@ -196,9 +198,10 @@ function makeActions(dispatch: React.Dispatch<Action>) {
           : server.updateExpense(txn.id, input),
       );
     },
-    deleteTxn: (id: string) => {
-      dispatch({ type: "deleteTxn", id });
-      persist(() => server.deleteExpense(id));
+    deleteTxns: (ids: string[]) => {
+      if (!ids.length) return;
+      dispatch({ type: "deleteTxns", ids });
+      persist(() => server.deleteExpenses(ids));
     },
     /** `needsReview: false` marks reviewed; `true` moves back to the review queue. */
     setReview: (ids: string[], needsReview: boolean) => {

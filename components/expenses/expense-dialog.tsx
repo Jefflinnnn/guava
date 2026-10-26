@@ -138,7 +138,7 @@ function ExpenseForm({
 }) {
   const cats = useCategories();
   const today = useToday();
-  const { upsertTxn, deleteTxn } = useActions();
+  const { upsertTxn, deleteTxns } = useActions();
   const [draft, setDraft] = useState(() => draftFrom(txn, today));
   const [amountTouched, setAmountTouched] = useState(false);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -179,7 +179,7 @@ function ExpenseForm({
     if (!txn) return;
     // Close first so the dialog animates out with the last draft still shown.
     onDone();
-    deleteTxn(txn.id);
+    deleteTxns([txn.id]);
   };
 
   return (

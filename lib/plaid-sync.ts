@@ -60,7 +60,8 @@ async function fetchChanges(
  * a name, category, note or "counts as spending" choice the user made is kept. A posted transaction that replaces
  * a pending one takes over the pending expense, keeping the user's edits.
  * Transactions the bank removed, or that stop qualifying (see
- * lib/plaid-mapping.ts), are deleted.
+ * lib/plaid-mapping.ts), are deleted. Ones the user deleted aren't imported
+ * again.
  */
 export async function syncItem(
   db: UserDb,
@@ -96,6 +97,16 @@ export async function syncItem(
       ? [u.plaidTransactionId, u.replacesPendingId]
       : [u.plaidTransactionId],
   );
+  // Transactions the user deleted stay deleted, including a pending one
+  // that has since posted under a new id.
+  const deleted = new Set(
+    (
+      await db.deletedBankTransaction.findMany({
+        where: { plaidTransactionId: { in: lookupIds } },
+        select: { plaidTransactionId: true },
+      })
+    ).map((d) => d.plaidTransactionId),
+  );
   const existing = new Map(
     (
       await db.expense.findMany({
@@ -109,6 +120,8 @@ export async function syncItem(
   const creates: Prisma.ExpenseCreateManyInput[] = [];
   const updates: { id: string; data: Prisma.ExpenseUncheckedUpdateInput }[] =
     [];
+  // A deleted pending transaction's posted id, so it stays deleted too.
+  const newlyDeleted: { plaidTransactionId: string }[] = [];
   for (const u of upserts) {
     const fields = {
       date: dateToDb(u.date),
@@ -121,7 +134,13 @@ export async function syncItem(
       ? existing.get(u.replacesPendingId)
       : undefined;
     const id = ownId ?? pendingId;
-    if (id) {
+    if (
+      !id &&
+      (deleted.has(u.plaidTransactionId) ||
+        (u.replacesPendingId && deleted.has(u.replacesPendingId)))
+    ) {
+      newlyDeleted.push({ plaidTransactionId: u.plaidTransactionId });
+    } else if (id) {
       updates.push({
         id,
         data: { ...fields, plaidTransactionId: u.plaidTransactionId },
@@ -150,6 +169,12 @@ export async function syncItem(
         counts.added = (
           await tx.expense.createMany({ data: creates, skipDuplicates: true })
         ).count;
+      }
+      if (newlyDeleted.length) {
+        await tx.deletedBankTransaction.createMany({
+          data: newlyDeleted,
+          skipDuplicates: true,
+        });
       }
       if (deletes.size) {
         counts.removed = (
