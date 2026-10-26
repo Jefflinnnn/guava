@@ -56,8 +56,8 @@ async function fetchChanges(
  * Syncs one bank connection into the user's database.
  *
  * New transactions become uncategorized expenses that need review. Changes
- * from the bank update only the amount, date and account, so a name,
- * category or note the user set is kept. A posted transaction that replaces
+ * from the bank update only the amount, date, account and bank category, so
+ * a name, category, note or "counts as spending" choice the user made is kept. A posted transaction that replaces
  * a pending one takes over the pending expense, keeping the user's edits.
  * Transactions the bank removed, or that stop qualifying (see
  * lib/plaid-mapping.ts), are deleted.
@@ -114,6 +114,7 @@ export async function syncItem(
       date: dateToDb(u.date),
       amountCents: u.amountCents,
       bankAccountId: accountId.get(u.plaidAccountId) ?? null,
+      bankCategory: u.bankCategory,
     };
     const ownId = existing.get(u.plaidTransactionId);
     const pendingId = u.replacesPendingId
@@ -132,6 +133,7 @@ export async function syncItem(
       creates.push({
         ...fields,
         name: u.name,
+        spending: u.spending,
         plaidTransactionId: u.plaidTransactionId,
         needsReview: true,
       });

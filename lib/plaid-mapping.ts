@@ -8,19 +8,24 @@ import type { DateKey } from "@/lib/guava/types";
 
 /** Expense names are VARCHAR(40). */
 const NAME_MAX = 40;
+/** Expense bank categories are VARCHAR(64). */
+const BANK_CATEGORY_MAX = 64;
 
 /**
- * Plaid categories that move money between the user's own accounts rather
- * than spend it. Importing them would count spending twice: a card purchase,
- * then again as the card payment from checking.
+ * Plaid categories that aren't spending. They're imported so the user sees
+ * every transaction, but left out of totals: transfers and card payments move
+ * money between the user's own accounts (counting them would count a card
+ * purchase twice), and income isn't spending at all.
  */
-const NOT_SPENDING = new Set(["TRANSFER_IN", "TRANSFER_OUT", "LOAN_PAYMENTS"]);
+const NOT_SPENDING = new Set([
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "LOAN_PAYMENTS",
+  "INCOME",
+]);
 
-/** Money in that isn't a refund. Income tracking is a later feature. */
-const INCOME = "INCOME";
-
-/** Why a transaction wasn't imported, or null when it was. */
-export type SkipReason = "income" | "transfer" | "zero" | "too-large";
+/** Why a transaction wasn't imported. */
+export type SkipReason = "zero" | "too-large";
 
 export type ImportedExpense = {
   plaidTransactionId: string;
@@ -29,17 +34,21 @@ export type ImportedExpense = {
   replacesPendingId: string | null;
   date: DateKey;
   name: string;
-  /** Positive for spending, negative for a refund. */
+  /** Positive for money out, negative for money in (refunds, income). */
   amountCents: number;
+  /** Whether it counts toward spending totals (see `NOT_SPENDING`). */
+  spending: boolean;
+  /** Plaid's detailed category, e.g. LOAN_PAYMENTS_CREDIT_CARD_PAYMENT. */
+  bankCategory: string | null;
 };
 
 /**
  * Maps one Plaid transaction to an expense, or says why it's skipped.
  *
  * - Plaid amounts are dollars, positive for money out. Money back from a
- *   merchant is a refund: a negative expense, so totals net out. Income is
- *   skipped for now.
- * - Transfers and loan or card payments are skipped (see `NOT_SPENDING`).
+ *   merchant is a refund: a negative expense, so totals net out.
+ * - Transfers, loan or card payments and income are imported as not spending
+ *   (see `NOT_SPENDING`); the user can change that per expense.
  * - The merchant name is preferred over the raw bank description.
  * - `date` is when the bank posted it, which matches statements.
  */
@@ -56,10 +65,8 @@ export function mapTransaction(
     | "personal_finance_category"
   >,
 ): ImportedExpense | SkipReason {
-  const category = t.personal_finance_category?.primary;
-  if (category && NOT_SPENDING.has(category)) return "transfer";
+  const category = t.personal_finance_category;
   const amountCents = Math.round(t.amount * 100);
-  if (amountCents < 0 && category === INCOME) return "income";
   // Zero-amount rows (authorizations, adjustments) carry no spending.
   if (amountCents === 0) return "zero";
   if (Math.abs(amountCents) > EXPENSE_CAP_CENTS) return "too-large";
@@ -70,6 +77,8 @@ export function mapTransaction(
     date: t.date as DateKey,
     name: expenseName(t.merchant_name, t.name),
     amountCents,
+    spending: !NOT_SPENDING.has(category?.primary ?? ""),
+    bankCategory: category?.detailed?.slice(0, BANK_CATEGORY_MAX) || null,
   };
 }
 
