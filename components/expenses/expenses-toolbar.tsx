@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Search, X } from "lucide-react";
 
+import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCatById } from "@/lib/guava/store";
+import { useActions, useCatById } from "@/lib/guava/store";
 import { cn } from "@/lib/utils";
 
 import { activeFilters } from "./filter-state";
@@ -14,8 +16,10 @@ import type { ExpensesView } from "./use-expenses-view";
 /** Search · active filter chips · Reset … bulk actions (when rows are selected). */
 export function ExpensesToolbar({ view }: { view: ExpensesView }) {
   const catById = useCatById();
+  const { deleteTxns } = useActions();
   const chips = activeFilters(view.filters, catById);
   const ids = view.selected;
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <div className="flex min-h-9 flex-wrap items-center gap-2">
@@ -45,9 +49,21 @@ export function ExpensesToolbar({ view }: { view: ExpensesView }) {
           count={ids.length}
           onMarkReviewed={() => view.setNeedsReview(ids, false)}
           onNeedsReview={() => view.setNeedsReview(ids, true)}
+          onDelete={() => setConfirmDelete(true)}
           onClear={view.clearSelection}
         />
       )}
+      <ConfirmDeleteDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete ${ids.length === 1 ? "1 expense" : `${ids.length} expenses`}?`}
+        description="This can't be undone. Deleted bank transactions won't come back when you sync."
+        onConfirm={() => {
+          setConfirmDelete(false);
+          deleteTxns(ids);
+          view.clearSelection();
+        }}
+      />
     </div>
   );
 }
@@ -107,11 +123,13 @@ function BulkBar({
   count,
   onMarkReviewed,
   onNeedsReview,
+  onDelete,
   onClear,
 }: {
   count: number;
   onMarkReviewed: () => void;
   onNeedsReview: () => void;
+  onDelete: () => void;
   onClear: () => void;
 }) {
   return (
@@ -123,6 +141,7 @@ function BulkBar({
       <span className="mr-1.5 font-medium">{count} selected</span>
       <BulkAction onClick={onMarkReviewed}>Mark reviewed</BulkAction>
       <BulkAction onClick={onNeedsReview}>Needs review</BulkAction>
+      <BulkAction onClick={onDelete}>Delete</BulkAction>
       <BulkAction aria-label="Clear selection" icon onClick={onClear}>
         <X className="size-3.5" />
       </BulkAction>

@@ -139,3 +139,11 @@ model BankAccount {
 
   @@index([itemId])
 }
+
+// Bank transactions the user deleted, so syncing doesn't import them again
+// (Plaid resends a transaction when it changes, and a pending charge comes
+// back under a new id once it posts).
+model DeletedBankTransaction {
+  plaidTransactionId String   @id
+  createdAt          DateTime @default(now())
+}

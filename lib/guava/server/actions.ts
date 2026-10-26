@@ -120,9 +120,27 @@ export async function updateExpense(expenseId: string, input: ExpenseInput) {
   if (!count) fail("Expense not found.");
 }
 
-export async function deleteExpense(expenseId: string) {
+/**
+ * Deletes expenses. Bank transactions among them are remembered, so syncing
+ * doesn't import them again (see lib/plaid-sync.ts).
+ */
+export async function deleteExpenses(ids: string[]) {
   const db = await getUserDb();
-  await db.expense.deleteMany({ where: { id: id(expenseId) } });
+  if (!Array.isArray(ids) || ids.length > 10_000) fail("Invalid ids.");
+  const where = { id: { in: ids.map(id) } };
+  await db.$transaction(async (tx) => {
+    const bank = await tx.expense.findMany({
+      where: { ...where, plaidTransactionId: { not: null } },
+      select: { plaidTransactionId: true },
+    });
+    if (bank.length) {
+      await tx.deletedBankTransaction.createMany({
+        data: bank.map((e) => ({ plaidTransactionId: e.plaidTransactionId! })),
+        skipDuplicates: true,
+      });
+    }
+    await tx.expense.deleteMany({ where });
+  });
 }
 
 export async function setExpensesReview(ids: string[], needsReview: boolean) {
