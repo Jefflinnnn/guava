@@ -96,10 +96,13 @@ export function ExpenseDialog({
   open,
   onOpenChange,
   txnId,
+  onDelete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   txnId: string | null;
+  /** Moves the expense to Recently deleted. */
+  onDelete: (id: string) => void;
 }) {
   const txns = useTxns();
   const isEdit = txnId != null;
@@ -122,6 +125,7 @@ export function ExpenseDialog({
           key={txnId ?? "new"}
           txn={txn}
           isEdit={isEdit}
+          onDelete={onDelete}
           onDone={() => onOpenChange(false)}
         />
       </DialogContent>
@@ -132,17 +136,19 @@ export function ExpenseDialog({
 function ExpenseForm({
   txn,
   isEdit,
+  onDelete,
   onDone,
 }: {
   txn: Txn | undefined;
   isEdit: boolean;
+  onDelete: (id: string) => void;
   onDone: () => void;
 }) {
   const cats = useCategories();
   const today = useToday();
   const accountById = useAccountById();
   const account = txn?.accountId ? accountById.get(txn.accountId) : undefined;
-  const { upsertTxn, deleteTxns } = useActions();
+  const { upsertTxn } = useActions();
   const [draft, setDraft] = useState(() => draftFrom(txn, today));
   const [amountTouched, setAmountTouched] = useState(false);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -184,7 +190,7 @@ function ExpenseForm({
     if (!txn) return;
     // Close first so the dialog animates out with the last draft still shown.
     onDone();
-    deleteTxns([txn.id]);
+    onDelete(txn.id);
   };
 
   return (

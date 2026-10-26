@@ -2,7 +2,8 @@ import "server-only";
 
 import type { UserDb } from "@/lib/user-db/client";
 
-import type { DateKey, Snapshot } from "../types";
+import type { DateKey, Snapshot, Txn } from "../types";
+import { purgeExpiredExpenses } from "./trash";
 import { isWidgetList } from "../widgets";
 
 // Expense dates are Postgres `date` columns. Prisma reads and writes them as
@@ -16,8 +17,12 @@ export function dateToDb(key: DateKey): Date {
   return new Date(`${key}T00:00:00.000Z`);
 }
 
-/** Loads everything the app shows from the user's own database. */
+/**
+ * Loads everything the app shows from the user's own database, after
+ * emptying Recently deleted of anything past its 30 days.
+ */
 export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
+  await purgeExpiredExpenses(db);
   const [cats, expenses, accounts, settings] = await Promise.all([
     db.category.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -46,6 +51,7 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
         spending: true,
         bankCategory: true,
         bankAccountId: true,
+        deletedAt: true,
       },
     }),
     db.bankAccount.findMany({
@@ -74,24 +80,44 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
       type: a.type,
       subtype: a.subtype,
     })),
-    txns: expenses.map((e) => ({
-      id: e.id,
-      date: dateFromDb(e.date),
-      name: e.name,
-      amountCents: e.amountCents,
-      catId: e.categoryId,
-      subId: e.subcategoryId,
-      needsReview: e.needsReview,
-      note: e.note,
-      spending: e.spending,
-      bankCategory: e.bankCategory,
-      accountId: e.bankAccountId,
-    })),
+    txns: expenses.filter((e) => !e.deletedAt).map(toTxn),
+    deleted: expenses
+      .filter((e) => e.deletedAt)
+      .sort((a, b) => b.deletedAt!.getTime() - a.deletedAt!.getTime())
+      .map((e) => ({ ...toTxn(e), deletedAt: e.deletedAt!.toISOString() })),
     settings: {
       autoBills: settings?.autoCategorizeBills ?? true,
       weekly: settings?.weeklyReminder ?? true,
       big: settings?.bigPurchaseAlert ?? false,
     },
     widgets: isWidgetList(settings?.widgets) ? settings.widgets : [],
+  };
+}
+
+function toTxn(e: {
+  id: string;
+  date: Date;
+  name: string;
+  amountCents: number;
+  categoryId: string | null;
+  subcategoryId: string | null;
+  needsReview: boolean;
+  note: string;
+  spending: boolean;
+  bankCategory: string | null;
+  bankAccountId: string | null;
+}): Txn {
+  return {
+    id: e.id,
+    date: dateFromDb(e.date),
+    name: e.name,
+    amountCents: e.amountCents,
+    catId: e.categoryId,
+    subId: e.subcategoryId,
+    needsReview: e.needsReview,
+    note: e.note,
+    spending: e.spending,
+    bankCategory: e.bankCategory,
+    accountId: e.bankAccountId,
   };
 }

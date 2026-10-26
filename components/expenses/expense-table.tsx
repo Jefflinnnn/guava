@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, CircleCheck } from "lucide-react";
+import { Check, CircleCheck, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { canMarkReviewed } from "@/lib/guava/spending";
 import { useAccountById, useCatById, useReviewCount } from "@/lib/guava/store";
-import type { Txn } from "@/lib/guava/types";
+import { daysLeft, TRASH_DAYS } from "@/lib/guava/trash";
+import type { DeletedTxn, Txn } from "@/lib/guava/types";
 
 import { ExpenseRow, type ExpenseRowVariant } from "./expense-row";
 import {
@@ -35,7 +36,7 @@ export function ExpenseTable({
   const accountById = useAccountById();
   const reviewCount = useReviewCount();
 
-  const rows = (list: Txn[], variant: ExpenseRowVariant) =>
+  const rows = (list: (Txn | DeletedTxn)[], variant: ExpenseRowVariant) =>
     list.map((t) => (
       <ExpenseRow
         key={t.id}
@@ -51,10 +52,13 @@ export function ExpenseTable({
         variant={variant}
         selected={view.selectedSet.has(t.id)}
         onSelectedChange={(on, range) => view.toggleSelected(t.id, on, range)}
-        onOpen={() => onOpen(t)}
+        onOpen={variant === "deleted" ? undefined : () => onOpen(t)}
         onToggleReview={() =>
-          view.setNeedsReview([t.id], variant === "reviewed")
+          variant === "deleted"
+            ? view.restore([t.id])
+            : view.setNeedsReview([t.id], variant === "reviewed")
         }
+        daysLeft={"deletedAt" in t ? daysLeft(t.deletedAt) : undefined}
       />
     ));
 
@@ -100,6 +104,20 @@ export function ExpenseTable({
           </section>
         )}
 
+        {view.showDeleted && (
+          <section aria-label="Recently deleted">
+            <SectionHeader
+              marker={<Trash2 className="size-3.5 text-ink-3" />}
+              title="Recently deleted"
+              count={view.deleted.length}
+            />
+            {rows(view.deleted, "deleted")}
+            <SectionFooter>
+              {`Deleted expenses stay here ${TRASH_DAYS} days, then are deleted for good.`}
+            </SectionFooter>
+          </section>
+        )}
+
         {view.showReviewed && (
           <section aria-label="Reviewed">
             <SectionHeader
@@ -127,6 +145,16 @@ export function ExpenseTable({
                 : "No reviewed expenses match these filters"}
             </SectionFooter>
           </section>
+        )}
+        {!view.showDeleted && view.deletedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => view.setFilters({ status: "deleted" })}
+            className="flex h-11 w-full cursor-pointer items-center gap-2 border-t px-4 text-[13px] text-ink-3 hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 className="size-3.5" />
+            Recently deleted ({view.deletedCount})
+          </button>
         )}
       </div>
     </Card>

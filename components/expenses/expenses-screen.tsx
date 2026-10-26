@@ -46,6 +46,7 @@ export function ExpensesScreen() {
         open={editor.open}
         onOpenChange={(open) => setEditor((e) => ({ ...e, open }))}
         txnId={editor.id}
+        onDelete={(id) => view.deleteExpenses([id])}
       />
     </Page>
   );

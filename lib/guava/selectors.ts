@@ -190,6 +190,7 @@ export const STATUS_FILTER_OPTIONS: [Filters["status"], string][] = [
   ["all", "All"],
   ["review", "Needs review"],
   ["reviewed", "Reviewed"],
+  ["deleted", "Recently deleted"],
 ];
 
 export function matchesDate(
@@ -209,13 +210,13 @@ export function bankKey(a: Account | undefined): string {
 }
 
 /** Applies every filter except status (sections split on that), then sorts. */
-export function filterTxns(
-  txns: Txn[],
+export function filterTxns<T extends Txn>(
+  txns: T[],
   f: Filters,
   sort: Sort,
   today: DateKey,
   accountById: Map<string, Account>,
-): Txn[] {
+): T[] {
   const accountOf = (t: Txn) =>
     t.accountId ? accountById.get(t.accountId) : undefined;
   const q = f.q.trim().toLowerCase();

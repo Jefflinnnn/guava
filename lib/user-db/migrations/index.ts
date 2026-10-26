@@ -12,6 +12,7 @@ import m0009 from "./0009_bank_login_required";
 import m0010 from "./0010_deleted_bank_transactions";
 import m0011 from "./0011_bank_account_details";
 import m0012 from "./0012_account_nickname";
+import m0013 from "./0013_recently_deleted";
 
 export const USER_DB_MIGRATIONS: {
   name: string;
@@ -29,4 +30,5 @@ export const USER_DB_MIGRATIONS: {
   { name: "0010_deleted_bank_transactions", migration: m0010 },
   { name: "0011_bank_account_details", migration: m0011 },
   { name: "0012_account_nickname", migration: m0012 },
+  { name: "0013_recently_deleted", migration: m0013 },
 ];

@@ -82,6 +82,9 @@ model Expense {
   plaidTransactionId String?      @unique
   bankAccountId      String?
   bankAccount        BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  // Set while the expense is in Recently deleted: hidden everywhere, and
+  // deleted for good 30 days later (see lib/guava/server/trash.ts).
+  deletedAt          DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -90,6 +93,7 @@ model Expense {
   @@index([categoryId])
   @@index([subcategoryId])
   @@index([bankAccountId])
+  @@index([deletedAt])
 }
 
 // The user's own Plaid API keys (bring your own key). One row, or none when
@@ -149,10 +153,13 @@ model BankAccount {
   @@index([itemId])
 }
 
-// Bank transactions the user deleted, so syncing doesn't import them again
-// (Plaid resends a transaction when it changes, and a pending charge comes
-// back under a new id once it posts).
+// Bank transactions deleted for good (after 30 days in Recently deleted), so
+// syncing doesn't import them again (Plaid resends a transaction when it
+// changes, and a pending charge comes back under a new id once it posts).
 model DeletedBankTransaction {
   plaidTransactionId String   @id
   createdAt          DateTime @default(now())
+  // Deleted before Recently deleted existed: the next sync brings it back
+  // into Recently deleted (and drops this row) instead of skipping it.
+  restorable         Boolean  @default(false)
 }

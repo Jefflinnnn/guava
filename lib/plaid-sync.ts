@@ -10,7 +10,13 @@ import { plaidErrorCode } from "@/lib/plaid";
 import { mapTransaction, type ImportedExpense } from "@/lib/plaid-mapping";
 import type { UserDb } from "@/lib/user-db/client";
 
-export type SyncCounts = { added: number; updated: number; removed: number };
+export type SyncCounts = {
+  added: number;
+  updated: number;
+  removed: number;
+  /** Deleted before Recently deleted existed, now back in it. */
+  restored: number;
+};
 
 /** Plaid's page size limit for /transactions/sync. */
 const PAGE_SIZE = 500;
@@ -60,8 +66,9 @@ async function fetchChanges(
  * a name, category, note or "counts as spending" choice the user made is kept. A posted transaction that replaces
  * a pending one takes over the pending expense, keeping the user's edits.
  * Transactions the bank removed, or that stop qualifying (see
- * lib/plaid-mapping.ts), are deleted. Ones the user deleted aren't imported
- * again.
+ * lib/plaid-mapping.ts), are deleted. Ones the user deleted for good aren't
+ * imported again; ones deleted before Recently deleted existed come back
+ * into it.
  */
 export async function syncItem(
   db: UserDb,
@@ -97,15 +104,16 @@ export async function syncItem(
       ? [u.plaidTransactionId, u.replacesPendingId]
       : [u.plaidTransactionId],
   );
-  // Transactions the user deleted stay deleted, including a pending one
-  // that has since posted under a new id.
-  const deleted = new Set(
+  // Transactions deleted for good stay deleted, including a pending one that
+  // has since posted under a new id. Ones deleted before Recently deleted
+  // existed (`restorable`) come back into it instead.
+  const deleted = new Map(
     (
       await db.deletedBankTransaction.findMany({
         where: { plaidTransactionId: { in: lookupIds } },
-        select: { plaidTransactionId: true },
+        select: { plaidTransactionId: true, createdAt: true, restorable: true },
       })
-    ).map((d) => d.plaidTransactionId),
+    ).map((d) => [d.plaidTransactionId, d]),
   );
   const existing = new Map(
     (
@@ -116,12 +124,16 @@ export async function syncItem(
     ).map((e) => [e.plaidTransactionId!, e.id]),
   );
 
-  const counts: SyncCounts = { added: 0, updated: 0, removed: 0 };
+  const counts: SyncCounts = { added: 0, updated: 0, removed: 0, restored: 0 };
   const creates: Prisma.ExpenseCreateManyInput[] = [];
   const updates: { id: string; data: Prisma.ExpenseUncheckedUpdateInput }[] =
     [];
   // A deleted pending transaction's posted id, so it stays deleted too.
   const newlyDeleted: { plaidTransactionId: string }[] = [];
+  // Restorable deletions coming back into Recently deleted, and their
+  // records to drop.
+  const restores: Prisma.ExpenseCreateManyInput[] = [];
+  const restoredIds: string[] = [];
   for (const u of upserts) {
     const fields = {
       date: dateToDb(u.date),
@@ -134,11 +146,21 @@ export async function syncItem(
       ? existing.get(u.replacesPendingId)
       : undefined;
     const id = ownId ?? pendingId;
-    if (
-      !id &&
-      (deleted.has(u.plaidTransactionId) ||
-        (u.replacesPendingId && deleted.has(u.replacesPendingId)))
-    ) {
+    const gone =
+      deleted.get(u.plaidTransactionId) ??
+      (u.replacesPendingId ? deleted.get(u.replacesPendingId) : undefined);
+    if (!id && gone?.restorable) {
+      restores.push({
+        ...fields,
+        name: u.name,
+        spending: u.spending,
+        plaidTransactionId: u.plaidTransactionId,
+        needsReview: true,
+        // Keeps its 30 days counting from when it was deleted.
+        deletedAt: gone.createdAt,
+      });
+      restoredIds.push(gone.plaidTransactionId, u.plaidTransactionId);
+    } else if (!id && gone) {
       newlyDeleted.push({ plaidTransactionId: u.plaidTransactionId });
     } else if (id) {
       updates.push({
@@ -169,6 +191,14 @@ export async function syncItem(
         counts.added = (
           await tx.expense.createMany({ data: creates, skipDuplicates: true })
         ).count;
+      }
+      if (restores.length) {
+        counts.restored = (
+          await tx.expense.createMany({ data: restores, skipDuplicates: true })
+        ).count;
+        await tx.deletedBankTransaction.deleteMany({
+          where: { plaidTransactionId: { in: restoredIds } },
+        });
       }
       if (newlyDeleted.length) {
         await tx.deletedBankTransaction.createMany({

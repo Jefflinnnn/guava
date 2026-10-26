@@ -7,7 +7,7 @@ import { InitialAvatar } from "@/components/guava/initial-avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/guava/dates";
-import { money } from "@/lib/guava/format";
+import { money, plural } from "@/lib/guava/format";
 import { canMarkReviewed, notSpendingLabel } from "@/lib/guava/spending";
 import { accountName, accountTitle } from "@/lib/guava/accounts";
 import type { Account, Cat, Txn } from "@/lib/guava/types";
@@ -16,12 +16,14 @@ import { cn } from "@/lib/utils";
 
 import { EXPENSE_GRID } from "./layout";
 
-export type ExpenseRowVariant = "review" | "reviewed";
+export type ExpenseRowVariant = "review" | "reviewed" | "deleted";
 
 /**
  * One expense in the table. `review` rows are bold with a pink left bar and a
- * ✓ action; `reviewed` rows are muted with a ↺ action. Clicking the row opens
- * the editor; the checkbox and action button don't.
+ * ✓ action; `reviewed` rows are muted with a ↺ action; `deleted` rows (in
+ * Recently deleted) show the days left and a restore action, and don't open
+ * the editor. Clicking the row opens the editor; the checkbox and action
+ * button don't.
  */
 export function ExpenseRow({
   txn,
@@ -32,6 +34,7 @@ export function ExpenseRow({
   onSelectedChange,
   onOpen,
   onToggleReview,
+  daysLeft,
 }: {
   txn: Txn;
   cat: Cat | undefined;
@@ -44,38 +47,47 @@ export function ExpenseRow({
   selected: boolean;
   /** `range` is true for a shift-click, which selects the rows in between. */
   onSelectedChange: (on: boolean, range: boolean) => void;
-  onOpen: () => void;
+  onOpen?: () => void;
+  /** The action button: ✓ / ↺ between the sections, or restore. */
   onToggleReview: () => void;
+  /** For `deleted` rows: days until it's deleted for good. */
+  daysLeft?: number;
 }) {
   const review = variant === "review";
+  const deleted = variant === "deleted";
   const { name: catName, color } = cat ?? UNCATEGORIZED;
   const sub = txn.subId ? cat?.subs.find((s) => s.id === txn.subId) : null;
   // Uncategorized spending can't be marked reviewed until it gets a category.
   const canReview = canMarkReviewed(txn);
-  const toggleLabel = !review
-    ? "Move back to Needs review"
-    : canReview
-      ? "Mark reviewed"
-      : "Pick a category to mark it reviewed";
+  const toggleLabel = deleted
+    ? "Restore"
+    : !review
+      ? "Move back to Needs review"
+      : canReview
+        ? "Mark reviewed"
+        : "Pick a category to mark it reviewed";
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Edit ${txn.name}`}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (
-          e.target === e.currentTarget &&
-          (e.key === "Enter" || e.key === " ")
-        ) {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
+      {...(onOpen && {
+        role: "button",
+        tabIndex: 0,
+        "aria-label": `Edit ${txn.name}`,
+        onClick: onOpen,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (
+            e.target === e.currentTarget &&
+            (e.key === "Enter" || e.key === " ")
+          ) {
+            e.preventDefault();
+            onOpen();
+          }
+        },
+      })}
       className={cn(
         EXPENSE_GRID[account === undefined ? "plain" : "accounts"],
-        "h-13 cursor-pointer border-b border-muted text-sm outline-none focus-visible:bg-muted",
+        "h-13 border-b border-muted text-sm outline-none focus-visible:bg-muted",
+        onOpen && "cursor-pointer",
         review
           ? "bg-card font-semibold shadow-[inset_3px_0_0_var(--pink)]"
           : "bg-surface text-ink-2",
@@ -144,7 +156,11 @@ export function ExpenseRow({
         {sub?.name ?? "—"}
       </span>
 
-      {review ? (
+      {deleted ? (
+        <span className="justify-self-start text-xs text-ink-3">
+          {daysLeft ? `Deletes in ${plural(daysLeft, "day")}` : "Deletes today"}
+        </span>
+      ) : review ? (
         <span className="inline-flex h-[22px] items-center justify-self-start rounded-full bg-pink-soft px-2 text-xs font-medium text-pink-ink">
           Needs review
         </span>

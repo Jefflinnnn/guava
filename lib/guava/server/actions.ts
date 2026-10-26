@@ -9,6 +9,7 @@ import { EXPENSE_CAP_CENTS } from "../money-input";
 import type { DateKey, Settings, Snapshot, Widget } from "../types";
 import { isWidgetList } from "../widgets";
 import { dateToDb, loadSnapshot } from "./snapshot";
+import { purgeExpenses } from "./trash";
 
 // Mutations behind the client store (lib/guava/store.tsx). The store applies
 // each change optimistically, then calls one of these to persist it. Every
@@ -120,26 +121,35 @@ export async function updateExpense(expenseId: string, input: ExpenseInput) {
   if (!count) fail("Expense not found.");
 }
 
-/**
- * Deletes expenses. Bank transactions among them are remembered, so syncing
- * doesn't import them again (see lib/plaid-sync.ts).
- */
-export async function deleteExpenses(ids: string[]) {
+function ids(v: unknown): string[] {
+  if (!Array.isArray(v) || v.length > 10_000) fail("Invalid ids.");
+  return v.map(id);
+}
+
+/** Moves expenses to Recently deleted (see lib/guava/trash.ts). */
+export async function deleteExpenses(expenseIds: string[]) {
   const db = await getUserDb();
-  if (!Array.isArray(ids) || ids.length > 10_000) fail("Invalid ids.");
-  const where = { id: { in: ids.map(id) } };
-  await db.$transaction(async (tx) => {
-    const bank = await tx.expense.findMany({
-      where: { ...where, plaidTransactionId: { not: null } },
-      select: { plaidTransactionId: true },
-    });
-    if (bank.length) {
-      await tx.deletedBankTransaction.createMany({
-        data: bank.map((e) => ({ plaidTransactionId: e.plaidTransactionId! })),
-        skipDuplicates: true,
-      });
-    }
-    await tx.expense.deleteMany({ where });
+  await db.expense.updateMany({
+    where: { id: { in: ids(expenseIds) }, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+}
+
+/** Brings expenses back from Recently deleted. */
+export async function restoreExpenses(expenseIds: string[]) {
+  const db = await getUserDb();
+  await db.expense.updateMany({
+    where: { id: { in: ids(expenseIds) } },
+    data: { deletedAt: null },
+  });
+}
+
+/** Deletes expenses in Recently deleted for good, without the 30-day wait. */
+export async function purgeDeletedExpenses(expenseIds: string[]) {
+  const db = await getUserDb();
+  await purgeExpenses(db, {
+    id: { in: ids(expenseIds) },
+    deletedAt: { not: null },
   });
 }
 
