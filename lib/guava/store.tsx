@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { clampMonth, monthOf, toKey } from "./dates";
+import { restoredTxn } from "./trash";
 import { heatThresholds, type HeatThresholds } from "./heat";
 import { canMarkReviewed } from "./spending";
 import {
@@ -27,6 +28,7 @@ import * as server from "./server/actions";
 import type {
   Account,
   Cat,
+  DeletedTxn,
   DateKey,
   DayTotal,
   Month,
@@ -58,7 +60,9 @@ export type SubDraft = Omit<Sub, "id"> & { id: string | null };
 type Action =
   | { type: "setMonth"; month: Month }
   | { type: "upsertTxn"; txn: Txn; isNew: boolean }
-  | { type: "deleteTxns"; ids: string[] }
+  | { type: "deleteTxns"; ids: string[]; deletedOn: DateKey }
+  | { type: "restoreTxns"; ids: string[] }
+  | { type: "purgeTxns"; ids: string[] }
   | { type: "setReview"; ids: string[]; needsReview: boolean }
   | { type: "upsertCat"; cat: Omit<Cat, "subs">; isNew: boolean }
   | { type: "deleteCat"; id: string; moveTo: string | null }
@@ -81,9 +85,33 @@ function reducer(s: State, a: Action): State {
             ...s,
             txns: s.txns.map((t) => (t.id === a.txn.id ? a.txn : t)),
           };
+    // Deleting moves expenses to Recently deleted; see lib/guava/trash.ts.
     case "deleteTxns": {
       const ids = new Set(a.ids);
-      return { ...s, txns: s.txns.filter((t) => !ids.has(t.id)) };
+      const moved = s.txns
+        .filter((t) => ids.has(t.id))
+        .map((t) => ({ ...t, deletedOn: a.deletedOn }));
+      return {
+        ...s,
+        txns: s.txns.filter((t) => !ids.has(t.id)),
+        deleted: [...moved, ...s.deleted],
+      };
+    }
+    case "restoreTxns": {
+      const ids = new Set(a.ids);
+      const back = s.deleted.filter((t) => ids.has(t.id)).map(restoredTxn);
+      return {
+        ...s,
+        // Kept newest first, like the list the server sends.
+        txns: [...back, ...s.txns].sort(
+          (x, y) => y.date.localeCompare(x.date) || y.id.localeCompare(x.id),
+        ),
+        deleted: s.deleted.filter((t) => !ids.has(t.id)),
+      };
+    }
+    case "purgeTxns": {
+      const ids = new Set(a.ids);
+      return { ...s, deleted: s.deleted.filter((t) => !ids.has(t.id)) };
     }
     case "setReview": {
       const ids = new Set(a.ids);
@@ -106,18 +134,21 @@ function reducer(s: State, a: Action): State {
               c.id === a.cat.id ? { ...c, ...a.cat } : c,
             ),
           };
-    case "deleteCat":
+    case "deleteCat": {
+      // Recently deleted expenses move too, as they do in the database.
+      const move = <T extends Txn>(t: T): T =>
+        t.catId !== a.id
+          ? t
+          : a.moveTo
+            ? { ...t, catId: a.moveTo, subId: null }
+            : { ...t, catId: null, subId: null, needsReview: true };
       return {
         ...s,
         cats: s.cats.filter((c) => c.id !== a.id),
-        txns: s.txns.map((t) =>
-          t.catId !== a.id
-            ? t
-            : a.moveTo
-              ? { ...t, catId: a.moveTo, subId: null }
-              : { ...t, catId: null, subId: null, needsReview: true },
-        ),
+        txns: s.txns.map(move),
+        deleted: s.deleted.map(move),
       };
+    }
     case "upsertSub":
       return {
         ...s,
@@ -139,11 +170,8 @@ function reducer(s: State, a: Action): State {
             ? { ...c, subs: c.subs.filter((x) => x.id !== a.subId) }
             : c,
         ),
-        txns: s.txns.map((t) =>
-          t.catId === a.catId && t.subId === a.subId
-            ? { ...t, subId: null }
-            : t,
-        ),
+        txns: s.txns.map((t) => dropSub(t, a.catId, a.subId)),
+        deleted: s.deleted.map((t) => dropSub(t, a.catId, a.subId)),
       };
     case "setSetting":
       return { ...s, settings: { ...s.settings, [a.key]: a.value } };
@@ -156,6 +184,10 @@ function reducer(s: State, a: Action): State {
     case "dismissSyncError":
       return { ...s, syncError: false };
   }
+}
+
+function dropSub<T extends Txn>(t: T, catId: string, subId: string): T {
+  return t.catId === catId && t.subId === subId ? { ...t, subId: null } : t;
 }
 
 const WIDGET_SAVE_DELAY_MS = 600;
@@ -199,10 +231,23 @@ function makeActions(dispatch: React.Dispatch<Action>) {
           : server.updateExpense(txn.id, input),
       );
     },
+    /** Moves expenses to Recently deleted. */
     deleteTxns: (ids: string[]) => {
       if (!ids.length) return;
-      dispatch({ type: "deleteTxns", ids });
+      dispatch({ type: "deleteTxns", ids, deletedOn: toKey(new Date()) });
       persist(() => server.deleteExpenses(ids));
+    },
+    /** Brings expenses back from Recently deleted. */
+    restoreTxns: (ids: string[]) => {
+      if (!ids.length) return;
+      dispatch({ type: "restoreTxns", ids });
+      persist(() => server.restoreExpenses(ids));
+    },
+    /** Deletes expenses in Recently deleted for good. */
+    purgeTxns: (ids: string[]) => {
+      if (!ids.length) return;
+      dispatch({ type: "purgeTxns", ids });
+      persist(() => server.purgeDeletedExpenses(ids));
     },
     /** `needsReview: false` marks reviewed; `true` moves back to the review queue. */
     setReview: (ids: string[], needsReview: boolean) => {
@@ -359,6 +404,11 @@ export function useCategories(): Cat[] {
 
 export function useCatById(): Map<string, Cat> {
   return useGuava().derived.catById;
+}
+
+/** Recently deleted, newest first. */
+export function useDeletedTxns(): DeletedTxn[] {
+  return useGuava().state.deleted;
 }
 
 export function useAccounts(): Account[] {

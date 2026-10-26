@@ -6,7 +6,8 @@ import { Search, X } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAccountById, useActions, useCatById } from "@/lib/guava/store";
+import { plural } from "@/lib/guava/format";
+import { useAccountById, useCatById } from "@/lib/guava/store";
 import { cn } from "@/lib/utils";
 
 import { activeFilters } from "./filter-state";
@@ -16,7 +17,6 @@ import type { ExpensesView } from "./use-expenses-view";
 /** Search · active filter chips · Reset … bulk actions (when rows are selected). */
 export function ExpensesToolbar({ view }: { view: ExpensesView }) {
   const catById = useCatById();
-  const { deleteTxns } = useActions();
   const accountById = useAccountById();
   const chips = activeFilters(view.filters, catById, accountById);
   const ids = view.selected;
@@ -45,24 +45,46 @@ export function ExpensesToolbar({ view }: { view: ExpensesView }) {
           Reset
         </Button>
       )}
-      {ids.length > 0 && (
-        <BulkBar
-          count={ids.length}
-          onMarkReviewed={() => view.setNeedsReview(ids, false)}
-          onNeedsReview={() => view.setNeedsReview(ids, true)}
-          onDelete={() => setConfirmDelete(true)}
-          onClear={view.clearSelection}
+      {ids.length === 0 && view.undoCount > 0 && (
+        <UndoNotice
+          count={view.undoCount}
+          onUndo={view.undoDelete}
+          onDismiss={view.dismissUndo}
         />
+      )}
+      {ids.length > 0 && (
+        <BulkBar count={ids.length} onClear={view.clearSelection}>
+          {view.showDeleted ? (
+            <>
+              <BulkAction onClick={() => view.restore(ids)}>Restore</BulkAction>
+              <BulkAction onClick={() => setConfirmDelete(true)}>
+                Delete now
+              </BulkAction>
+            </>
+          ) : (
+            <>
+              <BulkAction onClick={() => view.setNeedsReview(ids, false)}>
+                Mark reviewed
+              </BulkAction>
+              <BulkAction onClick={() => view.setNeedsReview(ids, true)}>
+                Needs review
+              </BulkAction>
+              <BulkAction onClick={() => view.deleteExpenses(ids)}>
+                Delete
+              </BulkAction>
+            </>
+          )}
+        </BulkBar>
       )}
       <ConfirmDeleteDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Delete ${ids.length === 1 ? "1 expense" : `${ids.length} expenses`}?`}
-        description="This can't be undone. Deleted bank transactions won't come back when you sync."
+        title={`Delete ${plural(ids.length, "expense")} for good?`}
+        description="They can't be restored afterwards. Deleted bank transactions won't come back when you sync."
+        confirmLabel="Delete now"
         onConfirm={() => {
           setConfirmDelete(false);
-          deleteTxns(ids);
-          view.clearSelection();
+          view.deleteForGood(ids);
         }}
       />
     </div>
@@ -122,16 +144,13 @@ function FilterChip({
 /** The primary-colored pill that appears while rows are selected. */
 function BulkBar({
   count,
-  onMarkReviewed,
-  onNeedsReview,
-  onDelete,
   onClear,
+  children,
 }: {
   count: number;
-  onMarkReviewed: () => void;
-  onNeedsReview: () => void;
-  onDelete: () => void;
   onClear: () => void;
+  /** The BulkAction buttons. */
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -140,12 +159,44 @@ function BulkBar({
       className="ml-auto flex h-9 items-center gap-1.5 rounded-lg bg-primary pr-1.5 pl-3 text-[13px] text-primary-foreground"
     >
       <span className="mr-1.5 font-medium">{count} selected</span>
-      <BulkAction onClick={onMarkReviewed}>Mark reviewed</BulkAction>
-      <BulkAction onClick={onNeedsReview}>Needs review</BulkAction>
-      <BulkAction onClick={onDelete}>Delete</BulkAction>
+      {children}
       <BulkAction aria-label="Clear selection" icon onClick={onClear}>
         <X className="size-3.5" />
       </BulkAction>
+    </div>
+  );
+}
+
+/** "Moved 3 expenses to Recently deleted · Undo", after a delete. */
+function UndoNotice({
+  count,
+  onUndo,
+  onDismiss,
+}: {
+  count: number;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="ml-auto flex h-9 items-center gap-1 rounded-lg border bg-card pr-1 pl-3 text-[13px] text-ink-2 shadow-control"
+    >
+      <span className="mr-1">
+        Moved {plural(count, "expense")} to Recently deleted.
+      </span>
+      <Button variant="ghost" size="xs" className="h-7 px-2" onClick={onUndo}>
+        Undo
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Dismiss"
+        className="size-7 text-ink-3"
+        onClick={onDismiss}
+      >
+        <X />
+      </Button>
     </div>
   );
 }

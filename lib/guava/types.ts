@@ -22,6 +22,12 @@ export type Txn = {
   accountId: string | null;
 };
 
+/** An expense in Recently deleted. */
+export type DeletedTxn = Txn & {
+  /** When it was deleted; it's gone for good TRASH_DAYS later. */
+  deletedOn: DateKey;
+};
+
 /** A bank account that expenses were imported from. */
 export type Account = {
   id: string;
@@ -54,7 +60,7 @@ export type WidgetSize = "half" | "full";
 export type Widget = { id: WidgetId; size: WidgetSize };
 
 export type DateFilter = "7d" | "30d" | "month" | "90d" | "all";
-export type StatusFilter = "all" | "review" | "reviewed";
+export type StatusFilter = "all" | "review" | "reviewed" | "deleted";
 
 export type Filters = {
   date: DateFilter;
@@ -87,6 +93,8 @@ export type DayTotal = { sum: number; n: number };
 /** Everything the app loads from the user's database on first render. */
 export type Snapshot = {
   txns: Txn[];
+  /** Recently deleted, newest first. */
+  deleted: DeletedTxn[];
   cats: Cat[];
   accounts: Account[];
   settings: Settings;

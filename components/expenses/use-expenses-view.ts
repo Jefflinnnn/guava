@@ -15,6 +15,7 @@ import {
   useAccountById,
   useAccounts,
   useActions,
+  useDeletedTxns,
   useToday,
   useTxns,
 } from "@/lib/guava/store";
@@ -29,7 +30,8 @@ import { DEFAULT_SORT_DIR, REVIEWED_PAGE_SIZE } from "./layout";
  */
 export function useExpensesView() {
   const txns = useTxns();
-  const { setReview } = useActions();
+  const deletedTxns = useDeletedTxns();
+  const { setReview, deleteTxns, restoreTxns, purgeTxns } = useActions();
   const today = useToday();
   const accounts = useAccounts();
   const accountById = useAccountById();
@@ -44,6 +46,8 @@ export function useExpensesView() {
   // The last checkbox clicked, where a shift-click range starts.
   const anchor = useRef<string | null>(null);
   const [reviewedLimit, setReviewedLimit] = useState(REVIEWED_PAGE_SIZE);
+  // The last batch moved to Recently deleted, for the toolbar's Undo.
+  const [lastDeleted, setLastDeleted] = useState<string[]>([]);
 
   const { review, reviewed, catCounts, bankCounts, accountCounts } =
     useMemo(() => {
@@ -79,20 +83,42 @@ export function useExpensesView() {
       };
     }, [txns, filters, sort, today, accountById]);
 
-  const showReview = filters.status !== "reviewed";
-  const showReviewed = filters.status !== "review";
+  // "Recently deleted" replaces both sections; the date filter doesn't apply.
+  const showDeleted = filters.status === "deleted";
+  const showReview = filters.status === "all" || filters.status === "review";
+  const showReviewed =
+    filters.status === "all" || filters.status === "reviewed";
   const reviewedShown = reviewed.slice(0, reviewedLimit);
+  const deleted = useMemo(
+    () =>
+      showDeleted
+        ? filterTxns(
+            deletedTxns,
+            { ...filters, date: "all" },
+            sort,
+            today,
+            accountById,
+          )
+        : [],
+    [showDeleted, deletedTxns, filters, sort, today, accountById],
+  );
 
   // Ignore ids that no longer exist (e.g. a selected expense was deleted).
   const selected = useMemo(() => {
-    const ids = new Set(txns.map((t) => t.id));
+    const ids = new Set((showDeleted ? deletedTxns : txns).map((t) => t.id));
     return selection.filter((id) => ids.has(id));
-  }, [txns, selection]);
+  }, [showDeleted, deletedTxns, txns, selection]);
   const selectedSet = new Set(selected);
+  // Undo only while those expenses are still in Recently deleted.
+  const undoable = useMemo(() => {
+    const ids = new Set(deletedTxns.map((t) => t.id));
+    return lastDeleted.filter((id) => ids.has(id));
+  }, [deletedTxns, lastDeleted]);
 
   const visibleIds = [
     ...(showReview ? review : []),
     ...(showReviewed ? reviewedShown : []),
+    ...deleted,
   ].map((t) => t.id);
   const allSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
@@ -105,6 +131,10 @@ export function useExpensesView() {
     reviewedShown,
     showReview,
     showReviewed,
+    deleted,
+    showDeleted,
+    /** How many expenses the toolbar's Undo would bring back. */
+    undoCount: undoable.length,
     catCounts,
     bankCounts,
     accountCounts,
@@ -118,6 +148,8 @@ export function useExpensesView() {
     hasVisibleRows: visibleIds.length > 0,
 
     setFilters(patch: Partial<Filters>) {
+      // A selection doesn't carry between Recently deleted and the rest.
+      if (patch.status && patch.status !== filters.status) setSelection([]);
       setFiltersState((f) => ({ ...f, ...patch }));
       setReviewedLimit(REVIEWED_PAGE_SIZE);
     },
@@ -160,6 +192,29 @@ export function useExpensesView() {
     /** Moves rows between the sections; always clears the selection. */
     setNeedsReview(ids: string[], needsReview: boolean) {
       setReview(ids, needsReview);
+      setSelection([]);
+    },
+    /** Moves expenses to Recently deleted (undoable from the toolbar). */
+    deleteExpenses(ids: string[]) {
+      deleteTxns(ids);
+      setLastDeleted(ids);
+      setSelection([]);
+    },
+    undoDelete() {
+      restoreTxns(undoable);
+      setLastDeleted([]);
+    },
+    dismissUndo() {
+      setLastDeleted([]);
+    },
+    /** Brings expenses back from Recently deleted. */
+    restore(ids: string[]) {
+      restoreTxns(ids);
+      setSelection([]);
+    },
+    /** Deletes expenses in Recently deleted for good. */
+    deleteForGood(ids: string[]) {
+      purgeTxns(ids);
       setSelection([]);
     },
   };

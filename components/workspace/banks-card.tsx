@@ -34,12 +34,14 @@ type SyncResult = SyncCounts & {
   loginRequired?: string[];
 };
 
-function summary({ added, updated, removed }: SyncCounts): string {
-  if (!added && !updated && !removed) return "Up to date. No new transactions.";
+function summary({ added, updated, removed, restored }: SyncCounts): string {
+  if (!added && !updated && !removed && !restored)
+    return "Up to date. No new transactions.";
   return [
     added && `${plural(added, "new expense")} to review`,
     updated && `${updated} updated`,
     removed && `${removed} removed`,
+    restored && `${restored} back in Recently deleted`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -78,7 +80,8 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
       const relogin = result.loginRequired?.length
         ? `${result.loginRequired.join(", ")} needs you to sign in again: use Reconnect below.`
         : "";
-      const changed = result.added || result.updated || result.removed;
+      const changed =
+        result.added || result.updated || result.removed || result.restored;
       // "Up to date" would be wrong when banks were skipped.
       const done = changed || !relogin ? summary(result) : "";
       setMessage({

@@ -195,7 +195,7 @@ export async function syncBanks(): Promise<
       orderBy: { createdAt: "asc" },
       select: { id: true, institutionName: true, loginRequired: true },
     });
-    const total: SyncCounts = { added: 0, updated: 0, removed: 0 };
+    const total: SyncCounts = { added: 0, updated: 0, removed: 0, restored: 0 };
     const loginRequired: string[] = [];
     for (const item of items) {
       const name = item.institutionName ?? "A bank";
@@ -208,6 +208,7 @@ export async function syncBanks(): Promise<
         total.added += counts.added;
         total.updated += counts.updated;
         total.removed += counts.removed;
+        total.restored += counts.restored;
       } catch (error) {
         if (plaidErrorCode(error) !== "ITEM_LOGIN_REQUIRED") throw error;
         await db.plaidItem.update({
