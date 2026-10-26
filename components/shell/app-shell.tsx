@@ -12,7 +12,7 @@ export function AppShell({
   return (
     <div className="flex h-dvh">
       <Sidebar user={user} />
-      <main className="flex min-w-0 flex-1 flex-col overflow-auto">
+      <main className="flex min-w-0 flex-1 scrollbar-thin flex-col overflow-auto">
         <SyncErrorBanner />
         {children}
       </main>

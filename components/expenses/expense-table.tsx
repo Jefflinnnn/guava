@@ -67,7 +67,7 @@ export function ExpenseTable({
   return (
     // The card is the scroll area (both ways), so the column header and the
     // section headers can stick to its top.
-    <Card className="min-h-0 overflow-auto">
+    <Card className="min-h-0 scrollbar-thin overflow-auto">
       <div
         className={TABLE_MIN_WIDTH[view.showAccounts ? "accounts" : "plain"]}
       >
