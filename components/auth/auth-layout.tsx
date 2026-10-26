@@ -46,13 +46,12 @@ function BrandPanel() {
         <span className="text-base font-semibold">guava</span>
       </div>
       <div className="flex max-w-[520px] flex-1 flex-col justify-center gap-7">
-        {/* Placeholder copy until marketing provides the real lines. */}
         <h1 className="text-[40px] leading-[1.08] font-semibold tracking-[-0.03em] text-balance">
-          Lorem ipsum dolor sit amet.
+          See where every dollar goes.
         </h1>
         <p className="max-w-[420px] text-base leading-[1.55] text-pretty text-auth-panel-muted">
-          Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-          labore et dolore magna aliqua.
+          Add expenses by hand or sync them from your bank, then review each
+          one. Your data stays in your own database.
         </p>
         <div aria-hidden className="grid max-w-[440px] grid-cols-18 gap-1">
           {GRID.map((level, i) => (
