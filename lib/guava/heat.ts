@@ -14,7 +14,8 @@ export function heatThresholds(days: Map<string, DayTotal>): HeatThresholds {
 }
 
 export function heatLevel(cents: number, th: HeatThresholds): HeatLevel {
-  if (!cents) return 0;
+  // Nothing spent, or refunds outweighed spending that day.
+  if (cents <= 0) return 0;
   if (cents <= th[0]) return 1;
   if (cents <= th[1]) return 2;
   if (cents <= th[2]) return 3;

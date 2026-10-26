@@ -33,7 +33,8 @@ const UNITS: [string, number][] = [
  */
 export function compact(cents: number, maxChars = 7): string {
   const a = Math.abs(cents) / 100;
-  if (a < 1000) return "$" + Math.round(a);
+  const sign = cents < 0 ? "-" : "";
+  if (a < 1000) return sign + "$" + Math.round(a);
   let i = a >= 1e12 ? 3 : a >= 1e9 ? 2 : a >= 1e6 ? 1 : 0;
   let x = a / UNITS[i][1];
   if (Math.round(x) >= 1000 && i < 3) {
@@ -41,10 +42,10 @@ export function compact(cents: number, maxChars = 7): string {
     x = a / UNITS[i][1];
   }
   for (const d of [2, 1, 0]) {
-    const s = "$" + x.toFixed(d) + UNITS[i][0];
+    const s = sign + "$" + x.toFixed(d) + UNITS[i][0];
     if (s.length <= maxChars || d === 0) return s;
   }
-  return "$" + Math.round(x) + UNITS[i][0];
+  return sign + "$" + Math.round(x) + UNITS[i][0];
 }
 
 /** Full `money` string, switching to `compact` only when it would overflow. */
@@ -96,4 +97,14 @@ export function initialsOf(name: string): string {
       .slice(0, 2)
       .toUpperCase() || "?"
   );
+}
+
+/** "just now", "5 min ago", "3 hr ago", "2 days ago" */
+export function timeAgo(iso: string, now: number = Date.now()): string {
+  const min = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr ago`;
+  return plural(Math.floor(hr / 24), "day") + " ago";
 }

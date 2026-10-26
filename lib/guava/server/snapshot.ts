@@ -43,6 +43,8 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
         subcategoryId: true,
         needsReview: true,
         note: true,
+        spending: true,
+        bankCategory: true,
       },
     }),
     db.settings.findUnique({ where: { id: 1 } }),
@@ -59,6 +61,8 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
       subId: e.subcategoryId,
       needsReview: e.needsReview,
       note: e.note,
+      spending: e.spending,
+      bankCategory: e.bankCategory,
     })),
     settings: {
       autoBills: settings?.autoCategorizeBills ?? true,

@@ -60,22 +60,82 @@ model Subcategory {
 // columns later. Amounts are positive; refunds and income come later.
 // No category means uncategorized; those always need review.
 model Expense {
-  id            String       @id @default(cuid())
+  id                 String       @id @default(cuid())
   // A calendar day with no time zone, read and written as YYYY-MM-DD.
-  date          DateTime     @db.Date
-  name          String       @db.VarChar(40)
-  amountCents   Int
-  categoryId    String?
-  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategoryId String?
-  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  needsReview   Boolean      @default(true)
-  note          String       @default("") @db.VarChar(200)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  date               DateTime     @db.Date
+  name               String       @db.VarChar(40)
+  amountCents        Int
+  categoryId         String?
+  category           Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryId      String?
+  subcategory        Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  needsReview        Boolean      @default(true)
+  note               String       @default("") @db.VarChar(200)
+  // False for money that isn't spending (card payments, transfers, income):
+  // listed so the user sees every bank transaction, but left out of totals.
+  spending           Boolean      @default(true)
+  // Plaid's detailed category (e.g. LOAN_PAYMENTS_CREDIT_CARD_PAYMENT) for
+  // imported expenses; null when entered by hand.
+  bankCategory       String?      @db.VarChar(64)
+  // Set on expenses imported from a bank through Plaid; null when entered by
+  // hand. Unique, so syncing twice never duplicates a transaction.
+  plaidTransactionId String?      @unique
+  bankAccountId      String?
+  bankAccount        BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@index([date])
   @@index([needsReview])
   @@index([categoryId])
   @@index([subcategoryId])
+  @@index([bankAccountId])
+}
+
+// The user's own Plaid API keys (bring your own key). One row, or none when
+// bank syncing isn't set up. Plaid is optional: without this row guava is a
+// manual expense tracker.
+model PlaidConfig {
+  id        Int      @id @default(1)
+  clientId  String   @db.VarChar(64)
+  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never sent to the browser.
+  secret    String
+  // "sandbox" or "production".
+  env       String   @db.VarChar(16)
+  updatedAt DateTime @updatedAt
+}
+
+// A bank login linked through Plaid Link (a Plaid "Item").
+model PlaidItem {
+  id              String        @id @default(cuid())
+  plaidItemId     String        @unique
+  // Encrypted with ENCRYPTION_KEY (see lib/crypto.ts). Never sent to the browser.
+  accessToken     String
+  institutionName String?
+  // Position in /transactions/sync, so each sync only pulls what changed.
+  cursor          String?
+  lastSyncedAt    DateTime?
+  // Set when the bank asks the user to sign in again (Plaid's
+  // ITEM_LOGIN_REQUIRED); syncing stops until they reconnect.
+  loginRequired   Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  accounts        BankAccount[]
+}
+
+// One account (checking, credit card, ...) under a PlaidItem.
+model BankAccount {
+  id             String    @id @default(cuid())
+  itemId         String
+  item           PlaidItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  plaidAccountId String    @unique
+  name           String
+  mask           String?
+  type           String
+  subtype        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  expenses       Expense[]
+
+  @@index([itemId])
 }

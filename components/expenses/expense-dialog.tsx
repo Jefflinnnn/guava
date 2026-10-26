@@ -10,6 +10,7 @@ import { Chip } from "@/components/guava/chip";
 import { Field } from "@/components/guava/field";
 import { InitialAvatar } from "@/components/guava/initial-avatar";
 import { MoneyInput } from "@/components/guava/money-input";
+import { Segmented } from "@/components/guava/segmented";
 import { SwitchRow } from "@/components/guava/switch-row";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ import {
   useToday,
   useTxns,
 } from "@/lib/guava/store";
+import { canMarkReviewed, notSpendingLabel } from "@/lib/guava/spending";
 import type { Cat, DateKey, Txn } from "@/lib/guava/types";
 import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
@@ -39,29 +41,37 @@ import { NAME_MAX, NOTE_MAX } from "./layout";
 
 type Draft = {
   name: string;
+  /** The amount as typed, always positive; `refund` gives the sign. */
   amountCents: number | null;
+  /** Money back from a merchant: saved as a negative amount. */
+  refund: boolean;
   date: DateKey;
   /** null = uncategorized. */
   catId: string | null;
   subId: string | null;
   note: string;
   reviewed: boolean;
+  /** Off for card payments, transfers and income: left out of totals. */
+  spending: boolean;
 };
 
 function draftFrom(txn: Txn | undefined, today: DateKey): Draft {
   if (txn)
     return {
       name: txn.name,
-      amountCents: txn.amountCents,
+      amountCents: Math.abs(txn.amountCents),
+      refund: txn.amountCents < 0,
       date: txn.date,
       catId: txn.catId,
       subId: txn.subId,
       note: txn.note,
       reviewed: !txn.needsReview,
+      spending: txn.spending,
     };
   return {
     name: "",
     amountCents: null,
+    refund: false,
     date: today,
     catId: null,
     subId: null,
@@ -69,6 +79,7 @@ function draftFrom(txn: Txn | undefined, today: DateKey): Draft {
     // You typed it in yourself, so it starts out reviewed (once it has a
     // category; uncategorized expenses always need review).
     reviewed: true,
+    spending: true,
   };
 }
 
@@ -140,19 +151,26 @@ function ExpenseForm({
       : undefined;
   const canSave =
     draft.name.trim() !== "" && amount > 0 && isDateKey(draft.date);
-  const reviewed = draft.reviewed && cat != null;
+  const reviewed =
+    draft.reviewed &&
+    canMarkReviewed({
+      catId: cat?.id ?? null,
+      spending: draft.spending,
+    });
 
   const save = () => {
     if (!canSave) return;
     upsertTxn({
       id: txn?.id ?? null,
       name: draft.name.trim(),
-      amountCents: amount,
+      amountCents: draft.refund ? -amount : amount,
       date: draft.date,
       catId: cat?.id ?? null,
       subId: cat ? draft.subId : null,
       note: draft.note.trim(),
       needsReview: !reviewed,
+      spending: draft.spending,
+      bankCategory: txn?.bankCategory ?? null,
     });
     onDone();
   };
@@ -169,7 +187,8 @@ function ExpenseForm({
       <ExpensePreview
         name={draft.name}
         date={draft.date}
-        amountCents={amount}
+        amountCents={draft.refund ? -amount : amount}
+        spending={draft.spending}
       />
 
       <div className="grid grid-cols-2 gap-3.5">
@@ -186,6 +205,17 @@ function ExpenseForm({
         </div>
         <MoneyInput
           label="Amount"
+          aside={
+            <Segmented
+              aria-label="Expense or refund"
+              value={draft.refund ? "refund" : "expense"}
+              onChange={(v) => set({ refund: v === "refund" })}
+              options={[
+                { value: "expense", label: "Spent" },
+                { value: "refund", label: "Refund" },
+              ]}
+            />
+          }
           valueCents={draft.amountCents}
           onChange={(amountCents) => {
             setAmountTouched(true);
@@ -214,14 +244,26 @@ function ExpenseForm({
 
       <SwitchRow
         bordered
+        title="Count as spending"
+        description={
+          draft.spending
+            ? "Included in totals and charts."
+            : `${notSpendingLabel(txn?.bankCategory ?? null)}: listed here but left out of totals, so it isn’t counted twice.`
+        }
+        checked={draft.spending}
+        onCheckedChange={(spending) => set({ spending })}
+      />
+
+      <SwitchRow
+        bordered
         title="Mark as reviewed"
         description={
-          cat
+          cat || !draft.spending
             ? "Reviewed expenses move to the bottom list."
             : "Pick a category first. Uncategorized expenses stay in review."
         }
         checked={reviewed}
-        disabled={!cat}
+        disabled={!cat && draft.spending}
         onCheckedChange={(reviewed) => set({ reviewed })}
       />
 
@@ -249,10 +291,12 @@ function ExpensePreview({
   name,
   date,
   amountCents,
+  spending,
 }: {
   name: string;
   date: DateKey;
   amountCents: number;
+  spending: boolean;
 }) {
   return (
     <div className="flex items-center gap-3.5 rounded-[10px] border border-muted bg-surface p-3.5">
@@ -265,7 +309,12 @@ function ExpensePreview({
           {isDateKey(date) ? formatLongDate(date) : "No date"}
         </div>
       </div>
-      <div className="text-[22px] font-semibold tracking-[-0.02em] tabular">
+      <div
+        className={cn(
+          "text-[22px] font-semibold tracking-[-0.02em] tabular",
+          !spending ? "text-ink-3" : amountCents < 0 && "text-success",
+        )}
+      >
         {money(amountCents)}
       </div>
     </div>

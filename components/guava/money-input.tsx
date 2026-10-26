@@ -16,6 +16,7 @@ import { Field } from "./field";
  */
 export function MoneyInput({
   label,
+  aside,
   valueCents,
   onChange,
   capCents,
@@ -27,6 +28,8 @@ export function MoneyInput({
   className,
 }: {
   label: React.ReactNode;
+  /** Right-aligned content in the label row. */
+  aside?: React.ReactNode;
   valueCents: number | null;
   onChange: (cents: number | null) => void;
   capCents: number;
@@ -43,6 +46,7 @@ export function MoneyInput({
   return (
     <Field
       label={label}
+      aside={aside}
       htmlFor={id}
       hint={hint}
       error={shownError}

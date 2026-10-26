@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
+import { canMarkReviewed, notSpendingLabel } from "@/lib/guava/spending";
 import type { Cat, Txn } from "@/lib/guava/types";
 import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
@@ -41,10 +42,11 @@ export function ExpenseRow({
   const review = variant === "review";
   const { name: catName, color } = cat ?? UNCATEGORIZED;
   const sub = txn.subId ? cat?.subs.find((s) => s.id === txn.subId) : null;
-  // Uncategorized expenses can't be marked reviewed until they get a category.
+  // Uncategorized spending can't be marked reviewed until it gets a category.
+  const canReview = canMarkReviewed(txn);
   const toggleLabel = !review
     ? "Move back to Needs review"
-    : cat
+    : canReview
       ? "Mark reviewed"
       : "Pick a category to mark it reviewed";
 
@@ -92,9 +94,26 @@ export function ExpenseRow({
           className={cn(!review && "border-transparent font-medium text-ink-3")}
         />
         <span className="truncate">{txn.name}</span>
+        {!txn.spending && (
+          <span
+            title="Not counted in totals"
+            className="inline-flex h-5 shrink-0 items-center rounded-full bg-muted px-2 text-xs font-medium text-ink-3"
+          >
+            {notSpendingLabel(txn.bankCategory)}
+          </span>
+        )}
       </div>
 
-      <span className="tabular">{money(txn.amountCents)}</span>
+      <span
+        className={cn(
+          "tabular",
+          !txn.spending
+            ? "font-normal text-ink-3"
+            : txn.amountCents < 0 && "text-success",
+        )}
+      >
+        {money(txn.amountCents)}
+      </span>
 
       <CategoryTag
         color={color}
@@ -127,7 +146,7 @@ export function ExpenseRow({
         size="icon-sm"
         title={toggleLabel}
         aria-label={toggleLabel}
-        disabled={review && !cat}
+        disabled={review && !canReview}
         onClick={(e) => {
           e.stopPropagation();
           onToggleReview();

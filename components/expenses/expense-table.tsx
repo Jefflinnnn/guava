@@ -4,6 +4,7 @@ import { Check, CircleCheck } from "lucide-react";
 
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
+import { canMarkReviewed } from "@/lib/guava/spending";
 import { useCatById, useReviewCount } from "@/lib/guava/store";
 import type { Txn } from "@/lib/guava/types";
 
@@ -63,8 +64,8 @@ export function ExpenseTable({
               title="Needs review"
               count={review.length}
               action={
-                // Uncategorized expenses can't be marked reviewed.
-                review.some((t) => t.catId != null) && (
+                // Uncategorized spending can't be marked reviewed.
+                review.some(canMarkReviewed) && (
                   <SectionAction
                     onClick={() =>
                       view.setNeedsReview(

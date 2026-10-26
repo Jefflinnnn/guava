@@ -58,6 +58,15 @@ export type CategoryStat = {
 
 export type UncategorizedStat = { spent: number; count: number; share: number };
 
+/**
+ * `part` as a 0–1 share of `total`. Refunds are negative expenses, so a
+ * category can net below zero or a month's total can be small; clamp so bars
+ * and percentages stay in range.
+ */
+export function shareOf(part: number, total: number): number {
+  return total > 0 ? Math.min(1, Math.max(0, part / total)) : 0;
+}
+
 /** Per-category spend for one month, sorted by spend (highest first). */
 export function categoryStats(
   txns: Txn[],
@@ -82,7 +91,7 @@ export function categoryStats(
       return {
         cat,
         ...c,
-        share: total ? c.spent / total : 0,
+        share: shareOf(c.spent, total),
         subs: cat.subs.map((sub) => ({
           sub,
           ...(spent.get(`${cat.id}/${sub.id}`) ?? { spent: 0, count: 0 }),
@@ -98,7 +107,7 @@ export function uncategorizedStat(txns: Txn[], m: Month): UncategorizedStat {
   const total = sumCents(month);
   const none = month.filter((t) => t.catId == null);
   const spent = sumCents(none);
-  return { spent, count: none.length, share: total ? spent / total : 0 };
+  return { spent, count: none.length, share: shareOf(spent, total) };
 }
 
 export type MonthTotal = {

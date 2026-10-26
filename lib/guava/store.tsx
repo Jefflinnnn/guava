@@ -12,6 +12,7 @@ import {
 
 import { clampMonth, monthOf, toKey } from "./dates";
 import { heatThresholds, type HeatThresholds } from "./heat";
+import { canMarkReviewed } from "./spending";
 import {
   categoryStats,
   dailyTotals,
@@ -85,9 +86,9 @@ function reducer(s: State, a: Action): State {
       const ids = new Set(a.ids);
       return {
         ...s,
-        // Uncategorized expenses stay in review until they get a category.
+        // Uncategorized spending stays in review until it gets a category.
         txns: s.txns.map((t) =>
-          ids.has(t.id) && t.catId != null
+          ids.has(t.id) && canMarkReviewed(t)
             ? { ...t, needsReview: a.needsReview }
             : t,
         ),
@@ -173,11 +174,19 @@ function makeActions(dispatch: React.Dispatch<Action>) {
 
   return {
     setMonth: (month: Month) => dispatch({ type: "setMonth", month }),
+    /** Re-reads everything from the database, e.g. after a bank sync. */
+    reload: async () => {
+      dispatch({ type: "reload", snapshot: await server.getSnapshot() });
+    },
     upsertTxn: ({ id, ...draft }: TxnDraft) => {
       const isNew = id == null;
       const input =
         draft.catId == null
-          ? { ...draft, subId: null, needsReview: true }
+          ? {
+              ...draft,
+              subId: null,
+              needsReview: !canMarkReviewed(draft) || draft.needsReview,
+            }
           : draft;
       const txn = { id: id ?? crypto.randomUUID(), ...input };
       dispatch({ type: "upsertTxn", txn, isNew });
@@ -258,6 +267,8 @@ type Derived = {
   catById: Map<string, Cat>;
   /** The earliest and latest months the month pickers allow. */
   bounds: { min: Month; max: Month };
+  /** Expenses that count toward totals (not card payments, transfers…). */
+  spending: Txn[];
 };
 
 const GuavaContext = createContext<{
@@ -295,7 +306,12 @@ export function GuavaProvider({
     syncError: false,
   }));
   const actions = useMemo(() => makeActions(dispatch), []);
-  const daily = useMemo(() => dailyTotals(state.txns), [state.txns]);
+  // Totals and charts count only spending (see lib/guava/spending.ts).
+  const spending = useMemo(
+    () => state.txns.filter((t) => t.spending),
+    [state.txns],
+  );
+  const daily = useMemo(() => dailyTotals(spending), [spending]);
   const derived = useMemo<Derived>(
     () => ({
       daily,
@@ -303,8 +319,9 @@ export function GuavaProvider({
       reviewCount: reviewCount(state.txns),
       catById: new Map(state.cats.map((c) => [c.id, c])),
       bounds: { min: firstMonth(state.txns, today), max: monthOf(today) },
+      spending,
     }),
-    [daily, state.txns, state.cats, today],
+    [daily, spending, state.txns, state.cats, today],
   );
   const value = useMemo(
     () => ({ state, actions, derived, today }),
@@ -385,26 +402,32 @@ export function useDailyTotals(): {
 
 /** Per-category stats for `month` (defaults to the selected month), highest spend first. */
 export function useCategoryStats(month?: Month): CategoryStat[] {
-  const { state } = useGuava();
+  const { state, derived } = useGuava();
   const m = month ?? state.month;
   return useMemo(
-    () => categoryStats(state.txns, state.cats, m),
-    [state.txns, state.cats, m],
+    () => categoryStats(derived.spending, state.cats, m),
+    [derived.spending, state.cats, m],
   );
 }
 
 /** Spend without a category for `month` (defaults to the selected month). */
 export function useUncategorizedStat(month?: Month): UncategorizedStat {
-  const { state } = useGuava();
+  const { state, derived } = useGuava();
   const m = month ?? state.month;
-  return useMemo(() => uncategorizedStat(state.txns, m), [state.txns, m]);
+  return useMemo(
+    () => uncategorizedStat(derived.spending, m),
+    [derived.spending, m],
+  );
 }
 
 export function useMonthlyTotals() {
-  const { state, derived, today } = useGuava();
-  const { txns } = state;
+  const { derived, today } = useGuava();
+  const { spending } = derived;
   const { min } = derived.bounds;
-  return useMemo(() => monthlyTotals(txns, min, today), [txns, min, today]);
+  return useMemo(
+    () => monthlyTotals(spending, min, today),
+    [spending, min, today],
+  );
 }
 
 /** The dashboard widget layout, saved to the user's settings. */

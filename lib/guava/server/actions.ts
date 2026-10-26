@@ -45,6 +45,12 @@ function cents(v: unknown, min: number, max: number): number {
     : fail("Invalid amount.");
 }
 
+/** An expense amount: positive for spending, negative for a refund. */
+function expenseCents(v: unknown): number {
+  const c = cents(v, -EXPENSE_CAP_CENTS, EXPENSE_CAP_CENTS);
+  return c === 0 ? fail("Invalid amount.") : c;
+}
+
 function bool(v: unknown): boolean {
   return typeof v === "boolean" ? v : fail("Invalid flag.");
 }
@@ -60,16 +66,19 @@ export type ExpenseInput = {
   subId: string | null;
   needsReview: boolean;
   note: string;
+  spending: boolean;
 };
 
 /**
  * Validates an expense and checks its category (and subcategory) exist. An
- * uncategorized expense has no subcategory and always needs review.
+ * uncategorized expense has no subcategory and needs review, unless it isn't
+ * spending (see lib/guava/spending.ts).
  */
 async function expenseData(db: UserDb, input: ExpenseInput) {
   const date = isDateKey(input?.date) ? input.date : fail("Invalid date.");
   const note = typeof input.note === "string" ? input.note.trim() : "";
   if (note.length > 200) fail("Invalid note.");
+  const spending = bool(input.spending);
   const categoryId = input.catId == null ? null : id(input.catId);
   const subcategoryId = input.subId == null ? null : id(input.subId);
   if (categoryId) {
@@ -86,11 +95,12 @@ async function expenseData(db: UserDb, input: ExpenseInput) {
   return {
     date: dateToDb(date),
     name: text(input.name, 40, "name"),
-    amountCents: cents(input.amountCents, 1, EXPENSE_CAP_CENTS),
+    amountCents: expenseCents(input.amountCents),
     categoryId,
     subcategoryId,
-    needsReview: bool(input.needsReview) || !categoryId,
+    needsReview: bool(input.needsReview) || (!categoryId && spending),
     note,
+    spending,
   };
 }
 
@@ -118,11 +128,13 @@ export async function deleteExpense(expenseId: string) {
 export async function setExpensesReview(ids: string[], needsReview: boolean) {
   const db = await getUserDb();
   if (!Array.isArray(ids) || ids.length > 10_000) fail("Invalid ids.");
-  // Uncategorized expenses stay in review until they get a category.
+  // Uncategorized spending stays in review until it gets a category.
   await db.expense.updateMany({
     where: {
       id: { in: ids.map(id) },
-      ...(bool(needsReview) ? {} : { categoryId: { not: null } }),
+      ...(bool(needsReview)
+        ? {}
+        : { OR: [{ categoryId: { not: null } }, { spending: false }] }),
     },
     data: { needsReview },
   });

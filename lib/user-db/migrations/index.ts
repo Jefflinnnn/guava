@@ -3,6 +3,12 @@ import type { UserDbMigration } from "./types";
 import m0001 from "./0001_init";
 import m0002 from "./0002_expenses_and_categories";
 import m0003 from "./0003_remove_budgets";
+import m0004 from "./0004_plaid_keys";
+import m0005 from "./0005_plaid_banks";
+import m0006 from "./0006_resync_refunds";
+import m0007 from "./0007_not_spending";
+import m0008 from "./0008_resync_not_spending";
+import m0009 from "./0009_bank_login_required";
 
 export const USER_DB_MIGRATIONS: {
   name: string;
@@ -11,4 +17,10 @@ export const USER_DB_MIGRATIONS: {
   { name: "0001_init", migration: m0001 },
   { name: "0002_expenses_and_categories", migration: m0002 },
   { name: "0003_remove_budgets", migration: m0003 },
+  { name: "0004_plaid_keys", migration: m0004 },
+  { name: "0005_plaid_banks", migration: m0005 },
+  { name: "0006_resync_refunds", migration: m0006 },
+  { name: "0007_not_spending", migration: m0007 },
+  { name: "0008_resync_not_spending", migration: m0008 },
+  { name: "0009_bank_login_required", migration: m0009 },
 ];
