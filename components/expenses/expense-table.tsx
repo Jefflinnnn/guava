@@ -65,9 +65,11 @@ export function ExpenseTable({
   const { review, reviewed, reviewedShown } = view;
 
   return (
-    // The card is the scroll area (both ways), so the column header and the
-    // section headers can stick to its top.
-    <Card className="min-h-0 scrollbar-slim overflow-auto">
+    // The page scrolls, not the card, so the column and section headers can
+    // stick to it. overflow-clip rounds the corners without making the card a
+    // scroll area, and min-w-fit widens it (and scrolls the page sideways)
+    // when the window is too narrow for the table.
+    <Card className="min-w-fit overflow-clip">
       <div
         className={TABLE_MIN_WIDTH[view.showAccounts ? "accounts" : "plain"]}
       >

@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Page, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
@@ -25,21 +25,41 @@ export function ExpensesScreen() {
     id: null,
   });
 
+  // The header and toolbar stick to the top of the page, and the table's
+  // column header sticks right below them, so it needs their height.
+  const top = useRef<HTMLDivElement>(null);
+  const [topHeight, setTopHeight] = useState(0);
+  useEffect(() => {
+    const el = top.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setTopHeight(el.offsetHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    // The page fills the viewport and only the table scrolls, so the header
-    // and toolbar stay in reach.
-    <Page width="full" className="min-h-0 flex-1">
-      <PageHeader
-        title="Expenses"
-        subtitle={`${reviewCount} need review · ${txns.length} total transactions`}
-        actions={
-          <Button onClick={() => setEditor({ open: true, id: null })}>
-            <Plus />
-            Add manual expense
-          </Button>
-        }
-      />
-      <ExpensesToolbar view={view} />
+    <Page
+      width="full"
+      style={{ "--expenses-top": `${topHeight}px` } as React.CSSProperties}
+    >
+      {/* -my/py: the page's padding and gap belong to the block, so rows
+          scroll under them instead of showing through. */}
+      <div
+        ref={top}
+        className="sticky top-0 z-20 -mt-6 -mb-5 flex flex-col gap-5 bg-background pt-6 pb-5"
+      >
+        <PageHeader
+          title="Expenses"
+          subtitle={`${reviewCount} need review · ${txns.length} total transactions`}
+          actions={
+            <Button onClick={() => setEditor({ open: true, id: null })}>
+              <Plus />
+              Add manual expense
+            </Button>
+          }
+        />
+        <ExpensesToolbar view={view} />
+      </div>
       <ExpenseTable
         view={view}
         onOpen={(t) => setEditor({ open: true, id: t.id })}

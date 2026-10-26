@@ -35,7 +35,7 @@ export function ExpenseTableHeader({ view }: { view: ExpensesView }) {
     <div
       className={cn(
         EXPENSE_GRID[view.showAccounts ? "accounts" : "plain"],
-        "sticky top-0 z-10 h-11 border-b bg-card text-[13px] font-medium text-ink-3",
+        "sticky top-(--expenses-top) z-10 h-11 border-b bg-card text-[13px] font-medium text-ink-3",
       )}
     >
       <div className="flex justify-center">

@@ -12,15 +12,18 @@ const WIDTHS = {
 export function Page({
   width = "wide",
   className,
+  style,
   children,
 }: {
   width?: keyof typeof WIDTHS;
   className?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn("flex w-full flex-col gap-5 p-6", WIDTHS[width], className)}
+      style={style}
     >
       {children}
     </div>

@@ -32,7 +32,7 @@ export function SectionHeader({
     </>
   );
   return (
-    <div className="sticky top-11 z-[5] flex h-10 items-center gap-2 border-b bg-muted px-4 text-xs font-semibold tracking-[0.02em] text-ink-2 uppercase">
+    <div className="sticky top-[calc(var(--expenses-top,0px)+44px)] z-[5] flex h-10 items-center gap-2 border-b bg-muted px-4 text-xs font-semibold tracking-[0.02em] text-ink-2 uppercase">
       {onToggle ? (
         <button
           type="button"
