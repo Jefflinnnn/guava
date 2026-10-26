@@ -239,31 +239,3 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
-
-/*
- * A 6px rounded thumb with no track, instead of the wide gray bar. Chrome
- * ignores ::-webkit-scrollbar once scrollbar-width is set, so the standard
- * properties are only for browsers without it (Firefox, whose thinnest is
- * `thin`).
- */
-@utility scrollbar-slim {
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  &::-webkit-scrollbar-track,
-  &::-webkit-scrollbar-corner {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    border-radius: 9999px;
-    background: var(--border-strong);
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--ink-3);
-  }
-  @supports not selector(::-webkit-scrollbar) {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
-  }
-}
