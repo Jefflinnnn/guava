@@ -123,19 +123,24 @@ model PlaidItem {
   accounts        BankAccount[]
 }
 
-// One account (checking, credit card, ...) under a PlaidItem.
+// One account (checking, credit card, ...) under a PlaidItem. Kept when its
+// bank is disconnected (itemId becomes null), so imported expenses still show
+// which bank and card they came from.
 model BankAccount {
-  id             String    @id @default(cuid())
-  itemId         String
-  item           PlaidItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  plaidAccountId String    @unique
-  name           String
-  mask           String?
-  type           String
-  subtype        String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  expenses       Expense[]
+  id              String     @id @default(cuid())
+  itemId          String?
+  item            PlaidItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  // Copied from the PlaidItem, since the item is gone after a disconnect.
+  institutionName String?
+  plaidAccountId  String     @unique
+  name            String
+  // Last 4 digits of the account or card number.
+  mask            String?
+  type            String
+  subtype         String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  expenses        Expense[]
 
   @@index([itemId])
 }

@@ -5,11 +5,17 @@ import {
   DATE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
 } from "@/lib/guava/selectors";
-import type { Cat, Filters } from "@/lib/guava/types";
+import {
+  accountLabel,
+  NO_ACCOUNT_KEY,
+  NO_ACCOUNT_LABEL,
+} from "@/lib/guava/accounts";
+import type { Account, Cat, Filters } from "@/lib/guava/types";
 import { UNCATEGORIZED, UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
 /** The filterable columns, in header order. */
-export type FilterKey = "date" | "name" | "amount" | "cat" | "sub" | "status";
+export type FilterKey =
+  "date" | "name" | "bank" | "account" | "amount" | "cat" | "sub" | "status";
 
 export type ActiveFilter = {
   key: FilterKey;
@@ -30,6 +36,8 @@ export function activeFilterKeys(f: Filters): Record<FilterKey, boolean> {
   return {
     date: f.date !== CLEARED_FILTERS.date,
     name: f.q.trim() !== "",
+    bank: f.banks.length > 0,
+    account: f.accounts.length > 0,
     amount: f.min !== "" || f.max !== "",
     cat: f.cats.length > 0,
     sub: f.subs.length > 0,
@@ -48,6 +56,7 @@ function amountLabel(min: string, max: string): string {
 export function activeFilters(
   f: Filters,
   catById: Map<string, Cat>,
+  accountById: Map<string, Account>,
 ): ActiveFilter[] {
   const on = activeFilterKeys(f);
   const subName = (key: string) => {
@@ -66,6 +75,24 @@ export function activeFilters(
       key: "name",
       label: `Name: “${f.q.trim()}”`,
       clear: { q: "" },
+    });
+  if (on.bank)
+    chips.push({
+      key: "bank",
+      label: `Bank: ${f.banks.map((b) => (b === NO_ACCOUNT_KEY ? NO_ACCOUNT_LABEL : b)).join(", ")}`,
+      clear: { banks: [] },
+    });
+  if (on.account)
+    chips.push({
+      key: "account",
+      label: `Card: ${f.accounts
+        .map((id) => {
+          if (id === NO_ACCOUNT_KEY) return NO_ACCOUNT_LABEL;
+          const a = accountById.get(id);
+          return a ? accountLabel(a) : "?";
+        })
+        .join(", ")}`,
+      clear: { accounts: [] },
     });
   if (on.amount)
     chips.push({

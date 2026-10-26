@@ -5,7 +5,7 @@ import { Check, CircleCheck } from "lucide-react";
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { canMarkReviewed } from "@/lib/guava/spending";
-import { useCatById, useReviewCount } from "@/lib/guava/store";
+import { useAccountById, useCatById, useReviewCount } from "@/lib/guava/store";
 import type { Txn } from "@/lib/guava/types";
 
 import { ExpenseRow, type ExpenseRowVariant } from "./expense-row";
@@ -32,6 +32,7 @@ export function ExpenseTable({
   onOpen: (txn: Txn) => void;
 }) {
   const catById = useCatById();
+  const accountById = useAccountById();
   const reviewCount = useReviewCount();
 
   const rows = (list: Txn[], variant: ExpenseRowVariant) =>
@@ -40,6 +41,13 @@ export function ExpenseTable({
         key={t.id}
         txn={t}
         cat={t.catId ? catById.get(t.catId) : undefined}
+        account={
+          view.showAccounts
+            ? t.accountId
+              ? (accountById.get(t.accountId) ?? null)
+              : null
+            : undefined
+        }
         variant={variant}
         selected={view.selectedSet.has(t.id)}
         onSelectedChange={(on, range) => view.toggleSelected(t.id, on, range)}
@@ -54,7 +62,9 @@ export function ExpenseTable({
 
   return (
     <Card className="overflow-x-auto">
-      <div className={TABLE_MIN_WIDTH}>
+      <div
+        className={TABLE_MIN_WIDTH[view.showAccounts ? "accounts" : "plain"]}
+      >
         <ExpenseTableHeader view={view} />
 
         {view.showReview && (

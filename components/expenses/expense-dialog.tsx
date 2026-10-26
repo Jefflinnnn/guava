@@ -26,7 +26,9 @@ import { CATEGORY_COLORS } from "@/lib/guava/colors";
 import { formatLongDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import { EXPENSE_CAP_CENTS } from "@/lib/guava/money-input";
+import { accountLabel } from "@/lib/guava/accounts";
 import {
+  useAccountById,
   useActions,
   useCategories,
   useToday,
@@ -138,6 +140,8 @@ function ExpenseForm({
 }) {
   const cats = useCategories();
   const today = useToday();
+  const accountById = useAccountById();
+  const account = txn?.accountId ? accountById.get(txn.accountId) : undefined;
   const { upsertTxn, deleteTxns } = useActions();
   const [draft, setDraft] = useState(() => draftFrom(txn, today));
   const [amountTouched, setAmountTouched] = useState(false);
@@ -171,6 +175,7 @@ function ExpenseForm({
       needsReview: !reviewed,
       spending: draft.spending,
       bankCategory: txn?.bankCategory ?? null,
+      accountId: txn?.accountId ?? null,
     });
     onDone();
   };
@@ -189,6 +194,9 @@ function ExpenseForm({
         date={draft.date}
         amountCents={draft.refund ? -amount : amount}
         spending={draft.spending}
+        source={
+          account && `${account.bank ?? "Bank"} · ${accountLabel(account)}`
+        }
       />
 
       <div className="grid grid-cols-2 gap-3.5">
@@ -292,14 +300,19 @@ function ExpensePreview({
   date,
   amountCents,
   spending,
+  source,
 }: {
   name: string;
   date: DateKey;
   amountCents: number;
   spending: boolean;
+  /** The bank and card it was imported from. */
+  source?: string;
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-[10px] border border-muted bg-surface p-3.5">
+    // min-w-0: a long bank and card line truncates instead of widening the
+    // dialog's grid.
+    <div className="flex min-w-0 items-center gap-3.5 rounded-[10px] border border-muted bg-surface p-3.5">
       <InitialAvatar name={name} size={40} className="bg-card" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold">
@@ -308,6 +321,11 @@ function ExpensePreview({
         <div className="text-xs text-ink-3">
           {isDateKey(date) ? formatLongDate(date) : "No date"}
         </div>
+        {source && (
+          <div className="truncate text-xs text-ink-3" title={source}>
+            {source}
+          </div>
+        )}
       </div>
       <div
         className={cn(

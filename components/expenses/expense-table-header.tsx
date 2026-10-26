@@ -1,13 +1,15 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCategories } from "@/lib/guava/store";
+import { useAccounts, useCategories } from "@/lib/guava/store";
 import type { SortKey } from "@/lib/guava/types";
 import { cn } from "@/lib/utils";
 
 import { ColumnHeader } from "./column-header";
 import {
+  AccountFilter,
   AmountFilter,
+  BankFilter,
   CategoryFilter,
   DateFilter,
   NameFilter,
@@ -21,6 +23,7 @@ import type { ExpensesView } from "./use-expenses-view";
 /** The 44px header row: select-all, sort toggles and column filters. */
 export function ExpenseTableHeader({ view }: { view: ExpensesView }) {
   const cats = useCategories();
+  const accounts = useAccounts();
   const { filters: f, sort, setFilters } = view;
   const active = activeFilterKeys(f);
   const sortProps = (key: SortKey) => ({
@@ -31,7 +34,7 @@ export function ExpenseTableHeader({ view }: { view: ExpensesView }) {
   return (
     <div
       className={cn(
-        EXPENSE_GRID,
+        EXPENSE_GRID[view.showAccounts ? "accounts" : "plain"],
         "h-11 border-b text-[13px] font-medium text-ink-3",
       )}
     >
@@ -59,6 +62,44 @@ export function ExpenseTableHeader({ view }: { view: ExpensesView }) {
       >
         <NameFilter value={f.q} setFilters={setFilters} />
       </ColumnHeader>
+
+      {view.showAccounts && (
+        <>
+          <ColumnHeader
+            label="Bank"
+            filter={{
+              active: active.bank,
+              title: "Filter bank",
+              width: "w-56",
+            }}
+          >
+            <BankFilter
+              accounts={accounts}
+              counts={view.bankCounts}
+              value={f.banks}
+              setFilters={setFilters}
+            />
+          </ColumnHeader>
+
+          <ColumnHeader
+            label="Card"
+            filter={{
+              active: active.account,
+              title: "Filter card",
+              width: "w-64",
+            }}
+          >
+            <AccountFilter
+              accounts={view.usedAccounts}
+              counts={view.accountCounts}
+              value={f.accounts}
+              setFilters={setFilters}
+            />
+          </ColumnHeader>
+
+          <span>Last 4</span>
+        </>
+      )}
 
       <ColumnHeader
         label="Amount"

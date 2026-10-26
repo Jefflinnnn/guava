@@ -25,6 +25,7 @@ import {
 } from "./selectors";
 import * as server from "./server/actions";
 import type {
+  Account,
   Cat,
   DateKey,
   DayTotal,
@@ -268,6 +269,7 @@ type Derived = {
   thresholds: HeatThresholds;
   reviewCount: number;
   catById: Map<string, Cat>;
+  accountById: Map<string, Account>;
   /** The earliest and latest months the month pickers allow. */
   bounds: { min: Month; max: Month };
   /** Expenses that count toward totals (not card payments, transfers…). */
@@ -321,10 +323,11 @@ export function GuavaProvider({
       thresholds: heatThresholds(daily),
       reviewCount: reviewCount(state.txns),
       catById: new Map(state.cats.map((c) => [c.id, c])),
+      accountById: new Map(state.accounts.map((a) => [a.id, a])),
       bounds: { min: firstMonth(state.txns, today), max: monthOf(today) },
       spending,
     }),
-    [daily, spending, state.txns, state.cats, today],
+    [daily, spending, state.txns, state.cats, state.accounts, today],
   );
   const value = useMemo(
     () => ({ state, actions, derived, today }),
@@ -356,6 +359,14 @@ export function useCategories(): Cat[] {
 
 export function useCatById(): Map<string, Cat> {
   return useGuava().derived.catById;
+}
+
+export function useAccounts(): Account[] {
+  return useGuava().state.accounts;
+}
+
+export function useAccountById(): Map<string, Account> {
+  return useGuava().derived.accountById;
 }
 
 /** The current calendar date (YYYY-MM-DD) in the browser's time zone. */

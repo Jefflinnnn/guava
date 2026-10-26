@@ -10,6 +10,7 @@ import m0007 from "./0007_not_spending";
 import m0008 from "./0008_resync_not_spending";
 import m0009 from "./0009_bank_login_required";
 import m0010 from "./0010_deleted_bank_transactions";
+import m0011 from "./0011_bank_account_details";
 
 export const USER_DB_MIGRATIONS: {
   name: string;
@@ -25,4 +26,5 @@ export const USER_DB_MIGRATIONS: {
   { name: "0008_resync_not_spending", migration: m0008 },
   { name: "0009_bank_login_required", migration: m0009 },
   { name: "0010_deleted_bank_transactions", migration: m0010 },
+  { name: "0011_bank_account_details", migration: m0011 },
 ];

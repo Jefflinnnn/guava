@@ -6,7 +6,7 @@ import { Search, X } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useActions, useCatById } from "@/lib/guava/store";
+import { useAccountById, useActions, useCatById } from "@/lib/guava/store";
 import { cn } from "@/lib/utils";
 
 import { activeFilters } from "./filter-state";
@@ -17,7 +17,8 @@ import type { ExpensesView } from "./use-expenses-view";
 export function ExpensesToolbar({ view }: { view: ExpensesView }) {
   const catById = useCatById();
   const { deleteTxns } = useActions();
-  const chips = activeFilters(view.filters, catById);
+  const accountById = useAccountById();
+  const chips = activeFilters(view.filters, catById, accountById);
   const ids = view.selected;
   const [confirmDelete, setConfirmDelete] = useState(false);
 

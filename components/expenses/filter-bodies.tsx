@@ -14,7 +14,13 @@ import {
   DATE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
 } from "@/lib/guava/selectors";
-import type { Cat, Filters } from "@/lib/guava/types";
+import {
+  accountLabel,
+  bankName,
+  NO_ACCOUNT_KEY,
+  NO_ACCOUNT_LABEL,
+} from "@/lib/guava/accounts";
+import type { Account, Cat, Filters } from "@/lib/guava/types";
 import { UNCATEGORIZED, UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
 
@@ -270,6 +276,98 @@ export function SubcategoryFilter({
         ))}
       </div>
     </>
+  );
+}
+
+/** One checkbox row per option, with how many expenses each has. */
+function CountedOptions({
+  heading,
+  options,
+  counts,
+  value,
+  onChange,
+}: {
+  heading: string;
+  options: { key: string; label: string; title?: string }[];
+  counts: Map<string, number>;
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  return (
+    <>
+      <FilterHeading>{heading}</FilterHeading>
+      <div className="max-h-[280px] overflow-y-auto">
+        {options.map((o) => (
+          <CheckOption
+            key={o.key}
+            checked={value.includes(o.key)}
+            onCheckedChange={(on) => onChange(toggle(value, o.key, on))}
+          >
+            <span className="min-w-0 flex-1 truncate" title={o.title}>
+              {o.label}
+            </span>
+            <span className="font-mono text-xs text-ink-3">
+              {counts.get(o.key) ?? 0}
+            </span>
+          </CheckOption>
+        ))}
+      </div>
+    </>
+  );
+}
+
+export function BankFilter({
+  accounts,
+  counts,
+  value,
+  setFilters,
+}: {
+  accounts: Account[];
+  counts: Map<string, number>;
+  value: string[];
+  setFilters: SetFilters;
+}) {
+  const banks = [...new Set(accounts.map(bankName))];
+  return (
+    <CountedOptions
+      heading="Show banks"
+      options={[
+        ...banks.map((b) => ({ key: b, label: b })),
+        { key: NO_ACCOUNT_KEY, label: NO_ACCOUNT_LABEL },
+      ]}
+      counts={counts}
+      value={value}
+      onChange={(banks) => setFilters({ banks })}
+    />
+  );
+}
+
+export function AccountFilter({
+  accounts,
+  counts,
+  value,
+  setFilters,
+}: {
+  accounts: Account[];
+  counts: Map<string, number>;
+  value: string[];
+  setFilters: SetFilters;
+}) {
+  return (
+    <CountedOptions
+      heading="Show cards and accounts"
+      options={[
+        ...accounts.map((a) => ({
+          key: a.id,
+          label: accountLabel(a),
+          title: `${bankName(a)} · ${accountLabel(a)}`,
+        })),
+        { key: NO_ACCOUNT_KEY, label: NO_ACCOUNT_LABEL },
+      ]}
+      counts={counts}
+      value={value}
+      onChange={(accounts) => setFilters({ accounts })}
+    />
   );
 }
 

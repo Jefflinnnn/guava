@@ -291,10 +291,9 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
           title={`Disconnect ${disconnecting.institution}?`}
           description={
             <>
-              guava stops syncing {disconnecting.institution} and forgets its
-              accounts.{" "}
+              guava stops syncing {disconnecting.institution}.{" "}
               {disconnecting.expenseCount
-                ? `The ${plural(disconnecting.expenseCount, "expense")} already imported stay in Expenses.`
+                ? `The ${plural(disconnecting.expenseCount, "expense")} already imported stay in Expenses, still showing their bank and card.`
                 : "Nothing was imported from it yet."}{" "}
               Connecting it again later imports its history again, as new
               expenses.
