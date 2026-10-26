@@ -70,18 +70,10 @@ export type ExpenseInput = {
   spending: boolean;
 };
 
-/**
- * Validates an expense and checks its category (and subcategory) exist. An
- * uncategorized expense has no subcategory and needs review, unless it isn't
- * spending (see lib/guava/spending.ts).
- */
-async function expenseData(db: UserDb, input: ExpenseInput) {
-  const date = isDateKey(input?.date) ? input.date : fail("Invalid date.");
-  const note = typeof input.note === "string" ? input.note.trim() : "";
-  if (note.length > 200) fail("Invalid note.");
-  const spending = bool(input.spending);
-  const categoryId = input.catId == null ? null : id(input.catId);
-  const subcategoryId = input.subId == null ? null : id(input.subId);
+/** Validates a category and subcategory pair and checks both exist. */
+async function categoryIds(db: UserDb, catId: unknown, subId: unknown) {
+  const categoryId = catId == null ? null : id(catId);
+  const subcategoryId = subId == null ? null : id(subId);
   if (categoryId) {
     const cat = await db.category.findUnique({
       where: { id: categoryId },
@@ -93,6 +85,24 @@ async function expenseData(db: UserDb, input: ExpenseInput) {
   } else if (subcategoryId) {
     fail("Subcategory needs a category.");
   }
+  return { categoryId, subcategoryId };
+}
+
+/**
+ * Validates an expense and checks its category (and subcategory) exist. An
+ * uncategorized expense has no subcategory and needs review, unless it isn't
+ * spending (see lib/guava/spending.ts).
+ */
+async function expenseData(db: UserDb, input: ExpenseInput) {
+  const date = isDateKey(input?.date) ? input.date : fail("Invalid date.");
+  const note = typeof input.note === "string" ? input.note.trim() : "";
+  if (note.length > 200) fail("Invalid note.");
+  const spending = bool(input.spending);
+  const { categoryId, subcategoryId } = await categoryIds(
+    db,
+    input.catId,
+    input.subId,
+  );
   return {
     date: dateToDb(date),
     name: text(input.name, 40, "name"),
@@ -166,6 +176,31 @@ export async function setExpensesReview(ids: string[], needsReview: boolean) {
     },
     data: { needsReview },
   });
+}
+
+/**
+ * Puts expenses in one category (and optionally a subcategory). Uncategorized
+ * spending goes back to review, as in expenseData.
+ */
+export async function categorizeExpenses(
+  expenseIds: string[],
+  catId: string | null,
+  subId: string | null,
+) {
+  const db = await getUserDb();
+  const where = { id: { in: ids(expenseIds) }, deletedAt: null };
+  const { categoryId, subcategoryId } = await categoryIds(db, catId, subId);
+  await db.$transaction([
+    db.expense.updateMany({ where, data: { categoryId, subcategoryId } }),
+    ...(categoryId
+      ? []
+      : [
+          db.expense.updateMany({
+            where: { ...where, spending: true },
+            data: { needsReview: true },
+          }),
+        ]),
+  ]);
 }
 
 // ---- Categories

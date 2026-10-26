@@ -10,6 +10,7 @@ import { plural } from "@/lib/guava/format";
 import { useAccountById, useCatById } from "@/lib/guava/store";
 import { cn } from "@/lib/utils";
 
+import { CategorizeMenu } from "./categorize-menu";
 import { activeFilters } from "./filter-state";
 import { SEARCH_MAX } from "./layout";
 import type { ExpensesView } from "./use-expenses-view";
@@ -63,6 +64,10 @@ export function ExpensesToolbar({ view }: { view: ExpensesView }) {
             </>
           ) : (
             <>
+              <CategorizeMenu
+                trigger={<BulkAction>Categorize</BulkAction>}
+                onPick={(catId, subId) => view.categorize(ids, catId, subId)}
+              />
               <BulkAction onClick={() => view.setNeedsReview(ids, false)}>
                 Mark reviewed
               </BulkAction>

@@ -64,6 +64,12 @@ type Action =
   | { type: "restoreTxns"; ids: string[] }
   | { type: "purgeTxns"; ids: string[] }
   | { type: "setReview"; ids: string[]; needsReview: boolean }
+  | {
+      type: "categorize";
+      ids: string[];
+      catId: string | null;
+      subId: string | null;
+    }
   | { type: "upsertCat"; cat: Omit<Cat, "subs">; isNew: boolean }
   | { type: "deleteCat"; id: string; moveTo: string | null }
   | { type: "upsertSub"; catId: string; sub: Sub; isNew: boolean }
@@ -121,6 +127,24 @@ function reducer(s: State, a: Action): State {
         txns: s.txns.map((t) =>
           ids.has(t.id) && canMarkReviewed(t)
             ? { ...t, needsReview: a.needsReview }
+            : t,
+        ),
+      };
+    }
+    case "categorize": {
+      const ids = new Set(a.ids);
+      return {
+        ...s,
+        // Uncategorized spending goes back to review.
+        txns: s.txns.map((t) =>
+          ids.has(t.id)
+            ? {
+                ...t,
+                catId: a.catId,
+                subId: a.subId,
+                needsReview:
+                  t.needsReview || !canMarkReviewed({ ...t, catId: a.catId }),
+              }
             : t,
         ),
       };
@@ -258,6 +282,12 @@ function makeActions(dispatch: React.Dispatch<Action>) {
       if (!ids.length) return;
       dispatch({ type: "setReview", ids, needsReview });
       persist(() => server.setExpensesReview(ids, needsReview));
+    },
+    /** Puts expenses in a category, or a subcategory of it. */
+    categorize: (ids: string[], catId: string | null, subId: string | null) => {
+      if (!ids.length) return;
+      dispatch({ type: "categorize", ids, catId, subId });
+      persist(() => server.categorizeExpenses(ids, catId, subId));
     },
     /** Returns the category's id (new ones get one here). */
     upsertCat: ({ id, ...input }: CatDraft): string => {

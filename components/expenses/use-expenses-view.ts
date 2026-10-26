@@ -31,7 +31,8 @@ import { DEFAULT_SORT_DIR, REVIEWED_PAGE_SIZE } from "./layout";
 export function useExpensesView() {
   const txns = useTxns();
   const deletedTxns = useDeletedTxns();
-  const { setReview, deleteTxns, restoreTxns, purgeTxns } = useActions();
+  const { setReview, categorize, deleteTxns, restoreTxns, purgeTxns } =
+    useActions();
   const today = useToday();
   const accounts = useAccounts();
   const accountById = useAccountById();
@@ -103,12 +104,6 @@ export function useExpensesView() {
     [showDeleted, deletedTxns, filters, sort, today, accountById],
   );
 
-  // Ignore ids that no longer exist (e.g. a selected expense was deleted).
-  const selected = useMemo(() => {
-    const ids = new Set((showDeleted ? deletedTxns : txns).map((t) => t.id));
-    return selection.filter((id) => ids.has(id));
-  }, [showDeleted, deletedTxns, txns, selection]);
-  const selectedSet = new Set(selected);
   // Undo only while those expenses are still in Recently deleted.
   const undoable = useMemo(() => {
     const ids = new Set(deletedTxns.map((t) => t.id));
@@ -120,6 +115,11 @@ export function useExpensesView() {
     ...(showReviewed ? reviewedShown : []),
     ...deleted,
   ].map((t) => t.id);
+  // Only rows on screen count as selected, so a bulk action never reaches an
+  // expense that was deleted or that a filter (or a new category) hid.
+  const visibleSet = new Set(visibleIds);
+  const selected = selection.filter((id) => visibleSet.has(id));
+  const selectedSet = new Set(selected);
   const allSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
 
@@ -195,6 +195,13 @@ export function useExpensesView() {
     setNeedsReview(ids: string[], needsReview: boolean) {
       setReview(ids, needsReview);
       setSelection([]);
+    },
+    /**
+     * Puts expenses in a category. The selection stays, so the same rows can
+     * be marked reviewed next.
+     */
+    categorize(ids: string[], catId: string | null, subId: string | null) {
+      categorize(ids, catId, subId);
     },
     /** Moves expenses to Recently deleted (undoable from the toolbar). */
     deleteExpenses(ids: string[]) {
