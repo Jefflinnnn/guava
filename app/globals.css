@@ -267,25 +267,3 @@
     scrollbar-color: var(--border-strong) transparent;
   }
 }
-
-/*
- * The Expenses table (components/expenses): its scrollbar gutter is beside
- * the sticky column header (44px) and section header (40px), which can't
- * paint into it. Paint those bands on the scrollbar itself so they reach the
- * card's edge, and start the thumb below them.
- */
-@utility scrollbar-under-headers {
-  &::-webkit-scrollbar {
-    background: linear-gradient(
-      to bottom,
-      transparent 43px,
-      var(--border) 43px 44px,
-      var(--muted) 44px 83px,
-      var(--border) 83px 84px,
-      transparent 84px
-    );
-  }
-  &::-webkit-scrollbar-track:vertical {
-    margin-top: 84px;
-  }
-}
