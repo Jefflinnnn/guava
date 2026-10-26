@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   CLEARED_FILTERS,
@@ -27,6 +27,8 @@ export function useExpensesView() {
   const [filters, setFiltersState] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [selection, setSelection] = useState<string[]>([]);
+  // The last checkbox clicked, where a shift-click range starts.
+  const anchor = useRef<string | null>(null);
   const [reviewedLimit, setReviewedLimit] = useState(REVIEWED_PAGE_SIZE);
 
   const { review, reviewed, catCounts } = useMemo(() => {
@@ -96,10 +98,22 @@ export function useExpensesView() {
     showMoreReviewed() {
       setReviewedLimit((n) => n + REVIEWED_PAGE_SIZE);
     },
-    toggleSelected(id: string, on: boolean) {
-      setSelection((s) =>
-        on ? [...s.filter((x) => x !== id), id] : s.filter((x) => x !== id),
-      );
+    /**
+     * Selects or deselects one row. With `range` (shift-click), every visible
+     * row from the last clicked one through this one follows it, like Gmail.
+     */
+    toggleSelected(id: string, on: boolean, range = false) {
+      const from = anchor.current ? visibleIds.indexOf(anchor.current) : -1;
+      const to = visibleIds.indexOf(id);
+      anchor.current = id;
+      const ids =
+        range && from >= 0 && to >= 0
+          ? visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1)
+          : [id];
+      setSelection((s) => {
+        const rest = s.filter((x) => !ids.includes(x));
+        return on ? [...rest, ...ids] : rest;
+      });
     },
     toggleAll() {
       setSelection(allSelected ? [] : visibleIds);
