@@ -8,6 +8,7 @@ import m0005 from "./0005_plaid_banks";
 import m0006 from "./0006_resync_refunds";
 import m0007 from "./0007_not_spending";
 import m0008 from "./0008_resync_not_spending";
+import m0009 from "./0009_bank_login_required";
 
 export const USER_DB_MIGRATIONS: {
   name: string;
@@ -21,4 +22,5 @@ export const USER_DB_MIGRATIONS: {
   { name: "0006_resync_refunds", migration: m0006 },
   { name: "0007_not_spending", migration: m0007 },
   { name: "0008_resync_not_spending", migration: m0008 },
+  { name: "0009_bank_login_required", migration: m0009 },
 ];

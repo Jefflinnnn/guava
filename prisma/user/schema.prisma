@@ -115,6 +115,9 @@ model PlaidItem {
   // Position in /transactions/sync, so each sync only pulls what changed.
   cursor          String?
   lastSyncedAt    DateTime?
+  // Set when the bank asks the user to sign in again (Plaid's
+  // ITEM_LOGIN_REQUIRED); syncing stops until they reconnect.
+  loginRequired   Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   accounts        BankAccount[]

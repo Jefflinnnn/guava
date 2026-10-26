@@ -96,6 +96,10 @@ export type BankDetails = {
   institution: string;
   /** ISO time of the last successful sync, or null. */
   lastSyncedAt: string | null;
+  /** The bank wants the user to sign in again before syncing. */
+  loginRequired: boolean;
+  /** Expenses imported from this bank's accounts. */
+  expenseCount: number;
   accounts: {
     id: string;
     name: string;
@@ -112,9 +116,16 @@ export async function loadBanks(db: UserDb): Promise<BankDetails[]> {
       id: true,
       institutionName: true,
       lastSyncedAt: true,
+      loginRequired: true,
       accounts: {
         orderBy: { name: "asc" },
-        select: { id: true, name: true, mask: true, subtype: true },
+        select: {
+          id: true,
+          name: true,
+          mask: true,
+          subtype: true,
+          _count: { select: { expenses: true } },
+        },
       },
     },
   });
@@ -122,6 +133,13 @@ export async function loadBanks(db: UserDb): Promise<BankDetails[]> {
     id: i.id,
     institution: i.institutionName ?? "Bank",
     lastSyncedAt: i.lastSyncedAt?.toISOString() ?? null,
-    accounts: i.accounts,
+    loginRequired: i.loginRequired,
+    expenseCount: i.accounts.reduce((n, a) => n + a._count.expenses, 0),
+    accounts: i.accounts.map((a) => ({
+      id: a.id,
+      name: a.name,
+      mask: a.mask,
+      subtype: a.subtype,
+    })),
   }));
 }

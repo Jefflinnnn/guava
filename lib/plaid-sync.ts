@@ -160,7 +160,11 @@ export async function syncItem(
       }
       await tx.plaidItem.update({
         where: { id: itemId },
-        data: { cursor: changes.cursor, lastSyncedAt: new Date() },
+        data: {
+          cursor: changes.cursor,
+          lastSyncedAt: new Date(),
+          loginRequired: false,
+        },
       });
     },
     { timeout: 30_000 },
