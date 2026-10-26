@@ -15,7 +15,10 @@ import { cn } from "@/lib/utils";
 
 import { SpendCalendarPopover } from "./spend-calendar-popover";
 
-/** ‹ [📅 September 2026] › — steps the dashboard month; the middle opens the Spend Calendar. */
+/**
+ * ‹ [📅 September 2026] › — steps the selected month, which Dashboard and
+ * Categories share; the middle opens the Spend Calendar.
+ */
 export function MonthControl() {
   const [month, setMonth] = useSelectedMonth();
   const bounds = useMonthBounds();
