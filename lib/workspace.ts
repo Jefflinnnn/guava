@@ -21,6 +21,35 @@ import {
 const TEST_TIMEOUT_MS = 10_000;
 
 /**
+ * Identifies a Neon database as "endpoint/database", so the pooled and direct
+ * strings for one database match: ep-abc-pooler.c-6.us-east-2.aws.neon.tech
+ * and ep-abc.us-east-2.aws.neon.tech are both endpoint "ep-abc".
+ */
+function neonDatabaseKey(url: string): string | null {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const endpoint = hostname.split(".")[0].replace(/-pooler$/, "");
+    const database = decodeURIComponent(pathname.slice(1));
+    return endpoint && database ? `${endpoint}/${database}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether `url` points at the app's own database (auth and workspaces). A
+ * workspace there would mix one user's data into the database every user's
+ * login lives in. Another database on the same Neon project is fine.
+ */
+function isAppDatabase(url: string): boolean {
+  const key = neonDatabaseKey(url);
+  if (!key) return false;
+  return [process.env.DATABASE_URL, process.env.DIRECT_URL].some(
+    (appUrl) => !!appUrl && neonDatabaseKey(appUrl) === key,
+  );
+}
+
+/**
  * Connects to a Neon database and reads its name and Postgres version.
  * Read-only: it doesn't create anything.
  */
@@ -44,6 +73,13 @@ export async function testNeonUrl(
     return {
       ok: false,
       error: "That isn’t a Neon host — it should end in .neon.tech.",
+    };
+  }
+  if (isAppDatabase(url)) {
+    return {
+      ok: false,
+      error:
+        "That’s guava’s own database, which holds everyone’s logins. Create a separate database for your data and connect that one.",
     };
   }
 
