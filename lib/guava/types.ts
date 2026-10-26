@@ -14,6 +14,10 @@ export type Txn = {
   subId: string | null;
   needsReview: boolean;
   note: string;
+  /** False for card payments, transfers and income: listed, not totaled. */
+  spending: boolean;
+  /** Plaid's detailed category for bank imports; null when typed in. */
+  bankCategory: string | null;
 };
 
 export type Sub = { id: string; name: string };
