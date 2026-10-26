@@ -27,7 +27,10 @@ export type Account = {
   id: string;
   /** The bank's name, e.g. "Chase". */
   bank: string | null;
+  /** The bank's name for the account, e.g. "Credit Card". */
   name: string;
+  /** The user's name for it, e.g. "Chase Freedom"; see accountName(). */
+  nickname: string | null;
   /** Last 4 digits of the account or card number. */
   mask: string | null;
   /** Plaid's type and subtype, e.g. "credit" / "credit card". */

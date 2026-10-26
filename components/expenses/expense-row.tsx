@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/guava/dates";
 import { money } from "@/lib/guava/format";
 import { canMarkReviewed, notSpendingLabel } from "@/lib/guava/spending";
-import { accountTitle } from "@/lib/guava/accounts";
+import { accountName, accountTitle } from "@/lib/guava/accounts";
 import type { Account, Cat, Txn } from "@/lib/guava/types";
 import { UNCATEGORIZED } from "@/lib/guava/uncategorized";
 import { cn } from "@/lib/utils";
@@ -192,7 +192,7 @@ function AccountCells({ account }: { account: Account | null }) {
     <>
       <span className={cn(cell, "text-ink-2")}>{account.bank ?? "Bank"}</span>
       <span className={cn(cell, "text-ink-2")} title={accountTitle(account)}>
-        {account.name}
+        {accountName(account)}
       </span>
       <span
         className={cn(cell, account.mask ? "text-ink-2 tabular" : "text-faint")}

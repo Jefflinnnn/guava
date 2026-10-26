@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { usePlaidLink, type PlaidLinkOnSuccess } from "react-plaid-link";
-import { Landmark, Loader2, RefreshCw } from "lucide-react";
+import { Check, Landmark, Loader2, Pencil, RefreshCw, X } from "lucide-react";
 
 import { ConfirmDeleteDialog } from "@/components/guava/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   connectBank,
   createLinkToken,
   disconnectBank,
   reconnectBank,
+  renameBankAccount,
   syncBanks,
   type BankResult,
 } from "@/lib/bank-actions";
@@ -250,11 +252,7 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
                   </p>
                   <ul className="mt-0.5 text-[13px] text-ink-3">
                     {b.accounts.map((a) => (
-                      <li key={a.id} className="truncate">
-                        {a.name}
-                        {a.mask ? ` ••${a.mask}` : ""}
-                        {a.subtype ? ` · ${a.subtype}` : ""}
-                      </li>
+                      <AccountRow key={a.id} account={a} onRenamed={refresh} />
                     ))}
                   </ul>
                 </div>
@@ -304,5 +302,110 @@ export function BanksCard({ banks }: { banks: BankDetails[] }) {
         />
       )}
     </section>
+  );
+}
+
+/**
+ * One account under a bank, with a pencil to give it your own name (e.g.
+ * "Chase Freedom"). Clearing the name goes back to the bank's.
+ */
+function AccountRow({
+  account: a,
+  onRenamed,
+}: {
+  account: BankDetails["accounts"][number];
+  onRenamed: () => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState("");
+  const [isSaving, startSaving] = useTransition();
+  const details = [a.mask && `••${a.mask}`, a.subtype].filter(Boolean);
+
+  function save() {
+    startSaving(async () => {
+      const result = await renameBankAccount(a.id, draft).catch(() => FAILED);
+      if (!result.ok) return setError(result.error);
+      await onRenamed();
+      setEditing(false);
+    });
+  }
+
+  if (editing)
+    return (
+      <li className="py-1">
+        <form
+          className="flex items-center gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <Input
+            autoFocus
+            value={draft}
+            maxLength={40}
+            placeholder={a.name}
+            aria-label={`Name for ${a.name}`}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+            className="h-7 max-w-64 text-[13px]"
+          />
+          <Button
+            type="submit"
+            size="icon-sm"
+            aria-label="Save name"
+            disabled={isSaving}
+            className="size-7"
+          >
+            {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Cancel"
+            disabled={isSaving}
+            onClick={() => setEditing(false)}
+            className="size-7 text-ink-3"
+          >
+            <X />
+          </Button>
+        </form>
+        <p className="mt-1 text-xs text-ink-3">
+          {error ? (
+            <span className="text-danger">{error}</span>
+          ) : (
+            `Leave empty to use the bank’s name, “${a.name}”.`
+          )}
+        </p>
+      </li>
+    );
+
+  return (
+    <li className="flex items-center gap-1">
+      <span className="truncate" title={a.nickname ? a.name : undefined}>
+        <span className={a.nickname ? "text-ink-2" : undefined}>
+          {a.nickname ?? a.name}
+        </span>
+        {details.length > 0 && ` ${details.join(" · ")}`}
+      </span>
+      <button
+        type="button"
+        aria-label={`Rename ${a.nickname ?? a.name}`}
+        title="Rename"
+        onClick={() => {
+          setDraft(a.nickname ?? "");
+          setError("");
+          setEditing(true);
+        }}
+        className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-faint hover:bg-muted hover:text-foreground"
+      >
+        <Pencil className="size-3" />
+      </button>
+    </li>
   );
 }
