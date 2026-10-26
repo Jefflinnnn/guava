@@ -60,7 +60,7 @@ export type SubDraft = Omit<Sub, "id"> & { id: string | null };
 type Action =
   | { type: "setMonth"; month: Month }
   | { type: "upsertTxn"; txn: Txn; isNew: boolean }
-  | { type: "deleteTxns"; ids: string[]; deletedOn: DateKey }
+  | { type: "deleteTxns"; ids: string[]; deletedAt: string }
   | { type: "restoreTxns"; ids: string[] }
   | { type: "purgeTxns"; ids: string[] }
   | { type: "setReview"; ids: string[]; needsReview: boolean }
@@ -90,7 +90,7 @@ function reducer(s: State, a: Action): State {
       const ids = new Set(a.ids);
       const moved = s.txns
         .filter((t) => ids.has(t.id))
-        .map((t) => ({ ...t, deletedOn: a.deletedOn }));
+        .map((t) => ({ ...t, deletedAt: a.deletedAt }));
       return {
         ...s,
         txns: s.txns.filter((t) => !ids.has(t.id)),
@@ -234,7 +234,11 @@ function makeActions(dispatch: React.Dispatch<Action>) {
     /** Moves expenses to Recently deleted. */
     deleteTxns: (ids: string[]) => {
       if (!ids.length) return;
-      dispatch({ type: "deleteTxns", ids, deletedOn: toKey(new Date()) });
+      dispatch({
+        type: "deleteTxns",
+        ids,
+        deletedAt: new Date().toISOString(),
+      });
       persist(() => server.deleteExpenses(ids));
     },
     /** Brings expenses back from Recently deleted. */

@@ -24,8 +24,8 @@ export type Txn = {
 
 /** An expense in Recently deleted. */
 export type DeletedTxn = Txn & {
-  /** When it was deleted; it's gone for good TRASH_DAYS later. */
-  deletedOn: DateKey;
+  /** When it was deleted (ISO time); it's gone for good TRASH_DAYS later. */
+  deletedAt: string;
 };
 
 /** A bank account that expenses were imported from. */

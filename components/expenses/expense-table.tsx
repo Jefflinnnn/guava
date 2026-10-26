@@ -5,12 +5,7 @@ import { Check, CircleCheck, Trash2 } from "lucide-react";
 import { Card } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { canMarkReviewed } from "@/lib/guava/spending";
-import {
-  useAccountById,
-  useCatById,
-  useReviewCount,
-  useToday,
-} from "@/lib/guava/store";
+import { useAccountById, useCatById, useReviewCount } from "@/lib/guava/store";
 import { daysLeft, TRASH_DAYS } from "@/lib/guava/trash";
 import type { DeletedTxn, Txn } from "@/lib/guava/types";
 
@@ -40,7 +35,6 @@ export function ExpenseTable({
   const catById = useCatById();
   const accountById = useAccountById();
   const reviewCount = useReviewCount();
-  const today = useToday();
 
   const rows = (list: (Txn | DeletedTxn)[], variant: ExpenseRowVariant) =>
     list.map((t) => (
@@ -64,7 +58,7 @@ export function ExpenseTable({
             ? view.restore([t.id])
             : view.setNeedsReview([t.id], variant === "reviewed")
         }
-        daysLeft={"deletedOn" in t ? daysLeft(t.deletedOn, today) : undefined}
+        daysLeft={"deletedAt" in t ? daysLeft(t.deletedAt) : undefined}
       />
     ));
 
@@ -151,6 +145,16 @@ export function ExpenseTable({
                 : "No reviewed expenses match these filters"}
             </SectionFooter>
           </section>
+        )}
+        {!view.showDeleted && view.deletedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => view.setFilters({ status: "deleted" })}
+            className="flex h-11 w-full cursor-pointer items-center gap-2 border-t px-4 text-[13px] text-ink-3 hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 className="size-3.5" />
+            Recently deleted ({view.deletedCount})
+          </button>
         )}
       </div>
     </Card>

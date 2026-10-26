@@ -133,6 +133,8 @@ export function useExpensesView() {
     showReviewed,
     deleted,
     showDeleted,
+    /** Everything in Recently deleted, whatever the filters. */
+    deletedCount: deletedTxns.length,
     /** How many expenses the toolbar's Undo would bring back. */
     undoCount: undoable.length,
     catCounts,

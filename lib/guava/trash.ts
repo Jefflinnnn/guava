@@ -1,21 +1,24 @@
-import { addDays } from "./dates";
-import type { DateKey, DeletedTxn, Txn } from "./types";
+import type { DeletedTxn, Txn } from "./types";
 
 // Recently deleted: deleted expenses stay restorable this many days, then
 // are deleted for good (see lib/guava/server/trash.ts).
 
 export const TRASH_DAYS = 30;
 
-/** Days left before an expense deleted on `deletedOn` is gone for good. */
-export function daysLeft(deletedOn: DateKey, today: DateKey): number {
-  const last = addDays(deletedOn, TRASH_DAYS);
-  const ms = Date.parse(`${last}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);
-  return Math.max(0, Math.round(ms / 86_400_000));
+const DAY_MS = 86_400_000;
+
+/**
+ * Whole days left (rounded up) before an expense deleted at `deletedAt` is
+ * gone for good: 30 right after deleting, 1 on its last day.
+ */
+export function daysLeft(deletedAt: string, now = Date.now()): number {
+  const ms = Date.parse(deletedAt) + TRASH_DAYS * DAY_MS - now;
+  return Math.max(0, Math.ceil(ms / DAY_MS));
 }
 
 /** A Recently deleted expense as a live one again. */
 export function restoredTxn(t: DeletedTxn): Txn {
   const copy: Partial<DeletedTxn> = { ...t };
-  delete copy.deletedOn;
+  delete copy.deletedAt;
   return copy as Txn;
 }

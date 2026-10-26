@@ -84,7 +84,7 @@ export async function loadSnapshot(db: UserDb): Promise<Snapshot> {
     deleted: expenses
       .filter((e) => e.deletedAt)
       .sort((a, b) => b.deletedAt!.getTime() - a.deletedAt!.getTime())
-      .map((e) => ({ ...toTxn(e), deletedOn: dateFromDb(e.deletedAt!) })),
+      .map((e) => ({ ...toTxn(e), deletedAt: e.deletedAt!.toISOString() })),
     settings: {
       autoBills: settings?.autoCategorizeBills ?? true,
       weekly: settings?.weeklyReminder ?? true,
