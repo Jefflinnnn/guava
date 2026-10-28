@@ -1,118 +1,96 @@
 # Guava
 
-Personal budgeting app built with:
+A personal expense tracker that keeps each user's expenses in a Neon Postgres database they own.
 
-- **Next.js 16** (App Router, TypeScript, React 19) for both frontend and backend
-- **shadcn/ui** (Nova preset) + Tailwind CSS v4
-- **Neon** Postgres through **Prisma 7** (Neon serverless driver adapter)
-- **Better Auth** for email + password accounts and sessions
-- **Plaid** for connecting bank accounts
+Guava's own database holds only logins and an encrypted pointer to each user's database. Expenses, categories, dashboard widgets and optional Plaid bank connections all live in the user's database, so their financial data never sits on the app's servers.
 
-## Setup
+Built with Next.js 16 (App Router, React 19), Tailwind CSS v4 and shadcn/ui, Prisma 7 on Neon's serverless driver, and Better Auth.
 
-**1. Install** (Node 20.9+, pnpm). This also generates the Prisma client.
+## Prerequisites
+
+- Node.js 20.9 or later and pnpm
+- A [Neon](https://neon.tech) project with two databases: one for the app, one to connect as your workspace
+- Docker, to run the integration and e2e tests
+
+## Getting started
+
+Install dependencies. This also generates both Prisma clients.
 
 ```bash
 pnpm install
 ```
 
-**2. Environment.** Copy the example and fill it in:
+Copy the example environment file and fill it in:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable                          | Where to get it                                                               |
-| --------------------------------- | ----------------------------------------------------------------------------- |
-| `DATABASE_URL`                    | Neon console → Connect → **Pooled** connection string                         |
-| `DIRECT_URL`                      | Same screen, pooling turned **off**                                           |
-| `PLAID_CLIENT_ID`, `PLAID_SECRET` | Plaid dashboard → Developers → Keys (use the Sandbox secret)                  |
-| `ENCRYPTION_KEY`                  | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
-| `BETTER_AUTH_SECRET`              | Same command as `ENCRYPTION_KEY` (use a different value)                      |
-| `BETTER_AUTH_URL`                 | The app's URL, e.g. `http://localhost:3000`                                   |
+| Variable             | Value                                                                         |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `DATABASE_URL`       | Neon console → Connect → pooled connection string for the app database        |
+| `DIRECT_URL`         | The same string with pooling off, used by Prisma migrations                   |
+| `BETTER_AUTH_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `BETTER_AUTH_URL`    | The app's URL, such as `http://localhost:3000`                                |
+| `ENCRYPTION_KEY`     | Same command as `BETTER_AUTH_SECRET`, with a different value                  |
 
-**3. Create the tables** in Neon by applying the committed migrations:
+`ENCRYPTION_KEY` encrypts stored connection strings and Plaid keys. Changing it makes saved data unreadable, so every environment that shares an app database must use the same value.
+
+Apply the app database migrations and start the dev server:
 
 ```bash
 pnpm db:deploy
-```
-
-If your database was created earlier with `pnpm db:migrate --name init` (before
-migrations were committed), mark the baseline as applied first:
-`pnpm prisma migrate resolve --applied 20261015000000_init`.
-
-**4. Run it:**
-
-```bash
 pnpm dev
 ```
 
-Check http://localhost:3000/api/health first; it should report `"database": "connected"`. Then open http://localhost:3000 and create an account (signed-out visitors go to `/login`). Step 2 asks for **your own Neon connection string**: create a separate, empty database for it (Neon console → Databases → New database). guava creates its tables there and keeps your expenses and categories in it. In **Settings**, click **Connect a bank**, pick any institution, and sign in with `user_good` / `pass_good`.
+Open http://localhost:3000/api/health to confirm the app reaches its database, then http://localhost:3000 to create an account. Onboarding asks for a second Neon connection string: use a separate, empty database. Guava creates its tables there.
 
-## Project layout
+To import bank transactions, open **Integrations**, save your own Plaid client ID and secret, and click **Connect a bank**. In the Plaid sandbox, any bank accepts `user_good` / `pass_good`.
 
-```
-prisma/schema.prisma          User, Session, AuthAccount, Verification (auth); PlaidItem, Account (banks)
-prisma/migrations/            Committed migrations (apply with pnpm db:deploy)
-proxy.ts                      Sends visitors without a session cookie to /login
-prisma/user/schema.prisma     Tables in each user's own database (their workspace)
-prisma.config.ts              Prisma CLI config (uses DIRECT_URL for migrations)
-app/
-  (auth)/                     /login, /signup, /connect (step 2: the user's database)
-  page.tsx                    Home: connected banks list + Link button
-  api/
-    auth/[...all]/            Better Auth endpoints
-    health/                   GET: database ping
-    plaid/
-      create-link-token/      POST: step 1 of Plaid Link
-      exchange-public-token/  POST: step 3, saves the bank and its accounts
-      webhook/                POST: Plaid webhook receiver (stub)
-components/
-  plaid-link-button.tsx       Client component that runs the Link flow
-  ui/                         shadcn components (add more: pnpm dlx shadcn@latest add dialog)
-lib/
-  auth.ts                     Better Auth config
-  workspace.ts                The user's own database: connection test, requireWorkspace, getUserDb
-  user-db/                    Client and migration runner for users' databases
-  guava/server/               Loads (snapshot.ts) and saves (actions.ts) app data in the user's database
-  current-user.ts             Session helpers (getSession, requireUser, getCurrentUserId)
-  prisma.ts                   Shared Prisma client (Neon adapter, pooled URL)
-  plaid.ts                    Plaid API client
-  crypto.ts                   AES-256-GCM encryption for stored access tokens
-generated/prisma/             Generated Prisma client (gitignored)
+## Databases
+
+| Database             | Schema                      | Holds                                                     | Migrations                                                   |
+| -------------------- | --------------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
+| App                  | `prisma/schema.prisma`      | Users, sessions, and each user's encrypted workspace link | `pnpm db:migrate` to create, `pnpm db:deploy` to apply       |
+| Workspace (a user's) | `prisma/user/schema.prisma` | Expenses, categories, settings, Plaid keys and banks      | `pnpm user-db:migration <name>`, applied by the app on visit |
+
+Workspace databases aren't managed by `prisma migrate`. After editing `prisma/user/schema.prisma`, `pnpm user-db:migration <name>` writes `lib/user-db/migrations/NNNN_<name>.ts`. Guava applies pending migrations when a user connects a database and on their first visit after a deploy. For steps SQL can't express, write a code migration (`{ up(client) }`) in the same folder and add it to `index.ts`.
+
+## Testing
+
+```bash
+pnpm test:unit                 # Vitest, no database
+pnpm test:db:up                # Postgres behind Neon's local proxy, in Docker
+pnpm test:integration          # Vitest against the test databases
+pnpm test:e2e                  # Builds the app and runs Playwright
+pnpm test:db:down
 ```
 
-## Two databases
+Unit tests sit next to the code they cover (`lib/**/*.test.ts`). Integration and e2e tests live in `tests/`. Before the first e2e run, install the browser with `pnpm exec playwright install chromium`.
 
-- **The app database** (`DATABASE_URL`, `prisma/schema.prisma`): logins, sessions and, per user, an encrypted `Workspace` row pointing at their own database. Change it with `pnpm db:migrate` and apply with `pnpm db:deploy`.
-- **Each user's database** (`prisma/user/schema.prisma`): their data: categories and subcategories (with budgets), expenses, and a single `Settings` row (preferences and dashboard widgets). A new database starts with the default categories (`lib/guava/default-categories.ts`). Not managed by `prisma migrate`. After editing the schema, run `pnpm user-db:migration <name>` to generate `lib/user-db/migrations/NNNN_<name>.ts`. guava applies pending migrations to a user's database when they connect it and on their next visit after a deploy. For steps SQL can't express well, such as seed data, write a code migration (`{ up(client) }`, see `0003_default_categories.ts`) in the same folder and add it to `index.ts`.
+The test databases come from `compose.test.yaml`. Setting `NEON_LOCAL_PROXY` points the app's Neon driver at the local proxy, so the tests exercise the same code as production. `tests/env.ts` builds the test settings at runtime and passes them over `.env`, so tests never touch real databases. The database password is random, created on the first `pnpm test:db:up` in `tests/db/.password` (gitignored).
+
+CI runs the unit, integration and e2e suites in parallel on every pull request and on pushes to `main`.
 
 ## Scripts
 
-| Command                         | Does                                                        |
-| ------------------------------- | ----------------------------------------------------------- |
-| `pnpm dev`                      | Dev server                                                  |
-| `pnpm build` / `pnpm start`     | Production build / serve                                    |
-| `pnpm lint` / `pnpm typecheck`  | ESLint / TypeScript                                         |
-| `pnpm db:migrate`               | Create and apply a migration after editing the schema (dev) |
-| `pnpm db:deploy`                | Apply existing migrations (production / CI)                 |
-| `pnpm user-db:migration <name>` | Generate the next migration for users' databases            |
-| `pnpm db:studio`                | Browse your Neon data in Prisma Studio                      |
-| `pnpm test:unit`                | Unit tests (Vitest, no database)                            |
-| `pnpm test:db:up` / `down`      | Start / stop the test databases (Docker)                    |
-| `pnpm test:integration`         | Integration tests against the test databases                |
-| `pnpm test:e2e`                 | Builds the app and runs the browser tests (Playwright)      |
+| Command                         | Does                                                    |
+| ------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                      | Starts the dev server                                   |
+| `pnpm build` / `pnpm start`     | Builds / serves the production app                      |
+| `pnpm lint` / `pnpm typecheck`  | Runs ESLint / TypeScript                                |
+| `pnpm format`                   | Formats with Prettier (`format:check` to check only)    |
+| `pnpm db:migrate`               | Creates and applies an app database migration (dev)     |
+| `pnpm db:deploy`                | Applies committed app database migrations               |
+| `pnpm db:studio`                | Opens Prisma Studio on the app database                 |
+| `pnpm user-db:migration <name>` | Generates the next workspace database migration         |
+| `pnpm -s plaid:dump`            | Prints raw Plaid data for a workspace's banks, for `jq` |
 
-## Tests
+## Contributing
 
-Unit tests sit next to the code they cover (`lib/**/*.test.ts`). Integration and e2e tests live in `tests/`. Both need Docker: `pnpm test:db:up` starts Postgres behind Neon's local proxy (`compose.test.yaml`). With `NEON_LOCAL_PROXY` set, the app's Neon driver connects there, so the tests run the same code as production. `tests/env.ts` builds the test settings and passes them over `.env`, so tests never touch your real databases. The database password is random, made on the first `pnpm test:db:up` and kept in `tests/db/.password` (gitignored).
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org), checked by commitlint in CI. [release-please](https://github.com/googleapis/release-please) reads them to open a release pull request that bumps the version and updates `CHANGELOG.md`.
 
-The first `pnpm test:e2e` needs a browser: `pnpm exec playwright install chromium`. It serves the app on port 3100, so a dev server on 3000 can keep running.
+## Known gaps
 
-CI (`.github/workflows/test.yaml`) runs unit, integration and e2e as three parallel jobs on every PR and on pushes to `main`.
-
-## Before going to production
-
-- **Add auth.** `lib/current-user.ts` returns a single demo user. Replace it with a real auth provider; every Plaid route already goes through it.
-- **Verify webhooks.** `app/api/plaid/webhook` logs events but doesn't check Plaid's signature yet.
-- **Keep access tokens server-side.** They're encrypted in the database and never returned to the browser. Keep `ENCRYPTION_KEY` out of git.
+- The Plaid webhook (`app/api/plaid/webhook`) logs events but doesn't verify Plaid's signature or act on them yet. Banks sync with **Sync now**.
+- There's no password reset until an email provider is added.
