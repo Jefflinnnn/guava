@@ -1,13 +1,9 @@
 import "server-only";
 
-import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import ws from "ws";
 
 import { PrismaClient } from "@/generated/prisma/client";
-
-// Neon's driver talks to Postgres over WebSockets.
-neonConfig.webSocketConstructor = ws;
+import "@/lib/neon-config";
 
 // Reuse one client across hot reloads in dev so we don't exhaust connections.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };

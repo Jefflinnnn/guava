@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { neon, NeonDbError } from "@neondatabase/serverless";
 
 import { decrypt } from "@/lib/crypto";
+import "@/lib/neon-config";
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 import { userDbClient, type UserDb } from "@/lib/user-db/client";

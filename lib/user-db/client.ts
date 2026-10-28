@@ -3,6 +3,7 @@ import "server-only";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 import { PrismaClient } from "@/generated/user-prisma/client";
+import "@/lib/neon-config";
 
 // One client per workspace database, reused across requests on the same
 // server instance. Capped so a busy instance doesn't hold a connection pool
