@@ -23,8 +23,15 @@ jobs:
     strategy:
       # Let the other suites finish when one fails.
       fail-fast: false
+      # What each suite needs besides dependencies.
       matrix:
-        suite: [unit, integration, e2e]
+        include:
+          - suite: unit
+          - suite: integration
+            databases: true
+          - suite: e2e
+            databases: true
+            browser: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,18 +49,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Start test databases
-        if: matrix.suite != 'unit'
+        if: matrix.databases
         run: pnpm test:db:up
 
       - name: Install Chromium
-        if: matrix.suite == 'e2e'
+        if: matrix.browser
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run ${{ matrix.suite }} tests
         run: pnpm test:${{ matrix.suite }}
 
       - name: Upload Playwright report
-        if: matrix.suite == 'e2e' && !cancelled()
+        if: matrix.browser && !cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
