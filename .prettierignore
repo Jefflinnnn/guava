@@ -2,3 +2,6 @@ generated
 pnpm-lock.yaml
 .neon
 CHANGELOG.md
+test-results
+playwright-report
+blob-report

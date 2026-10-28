@@ -1,0 +1,35 @@
+---
+# Throwaway databases for the integration and e2e tests: Postgres behind
+# Neon's local proxy, so the app's Neon driver (HTTP and WebSockets) works
+# unchanged. CI uses this file too. Start and stop it with
+# `pnpm test:db:up` / `pnpm test:db:down` (tests/db/compose.mjs), which set
+# the variables passed through below.
+# Data lives in memory and is gone after `down`.
+name: guava-test
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=guava
+      - POSTGRES_PASSWORD
+    ports: ["54329:5432"]
+    tmpfs: /var/lib/postgresql/data
+    volumes:
+      - ./tests/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      # Over TCP: during init Postgres only listens on its socket.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy@sha256:cd2ae14edf2feafbc3330492de5c80506f77274c3bd013154cdef697bdeb768a
+    environment:
+      - PG_CONNECTION_STRING
+    ports: ["4444:4444"]
+    depends_on:
+      postgres:
+        condition: service_healthy

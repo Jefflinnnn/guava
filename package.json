@@ -15,7 +15,13 @@
     "db:studio": "prisma studio",
     "plaid:dump": "node scripts/plaid-dump.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "playwright test",
+    "test:db:up": "node tests/db/compose.mjs up -d --wait",
+    "test:db:down": "node tests/db/compose.mjs down"
   },
   "dependencies": {
     "@neon/config": "^1.8.4",
@@ -39,6 +45,7 @@
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -50,7 +57,8 @@
     "prettier": "3.9.10",
     "prisma": "7.10.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   },
   "packageManager": "pnpm@12.9.1"
 }

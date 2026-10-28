@@ -1,12 +1,10 @@
 import "server-only";
 
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import ws from "ws";
+import { Pool } from "@neondatabase/serverless";
+
+import "@/lib/neon-config";
 
 import { USER_DB_MIGRATIONS } from "./migrations";
-
-// Neon's driver talks to Postgres over WebSockets (as in lib/prisma.ts).
-neonConfig.webSocketConstructor = ws;
 
 /** The newest migration this build knows about. */
 export const LATEST_USER_DB_MIGRATION = USER_DB_MIGRATIONS.at(-1)!.name;

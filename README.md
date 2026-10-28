@@ -98,6 +98,18 @@ generated/prisma/             Generated Prisma client (gitignored)
 | `pnpm db:deploy`                | Apply existing migrations (production / CI)                 |
 | `pnpm user-db:migration <name>` | Generate the next migration for users' databases            |
 | `pnpm db:studio`                | Browse your Neon data in Prisma Studio                      |
+| `pnpm test:unit`                | Unit tests (Vitest, no database)                            |
+| `pnpm test:db:up` / `down`      | Start / stop the test databases (Docker)                    |
+| `pnpm test:integration`         | Integration tests against the test databases                |
+| `pnpm test:e2e`                 | Builds the app and runs the browser tests (Playwright)      |
+
+## Tests
+
+Unit tests sit next to the code they cover (`lib/**/*.test.ts`). Integration and e2e tests live in `tests/`. Both need Docker: `pnpm test:db:up` starts Postgres behind Neon's local proxy (`compose.test.yaml`). With `NEON_LOCAL_PROXY` set, the app's Neon driver connects there, so the tests run the same code as production. `tests/env.ts` builds the test settings and passes them over `.env`, so tests never touch your real databases. The database password is random, made on the first `pnpm test:db:up` and kept in `tests/db/.password` (gitignored).
+
+The first `pnpm test:e2e` needs a browser: `pnpm exec playwright install chromium`. It serves the app on port 3100, so a dev server on 3000 can keep running.
+
+CI (`.github/workflows/test.yaml`) runs unit, integration and e2e as three parallel jobs on every PR and on pushes to `main`.
 
 ## Before going to production
 
