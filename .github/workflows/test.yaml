@@ -14,38 +14,17 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
-# The three jobs run in parallel.
 jobs:
-  unit:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup
-        uses: ./.github/actions/setup
-
-      - name: Run unit tests
-        run: pnpm test:unit
-
-  integration:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup
-        uses: ./.github/actions/setup
-
-      - name: Start test databases
-        run: pnpm test:db:up
-
-      - name: Run integration tests
-        run: pnpm test:integration
-
-  e2e:
+  # One job per suite, run in parallel.
+  test:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      # Let the other suites finish when one fails.
+      fail-fast: false
+      matrix:
+        suite: [unit, integration, e2e]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,17 +33,19 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Start test databases
+        if: matrix.suite != 'unit'
         run: pnpm test:db:up
 
       - name: Install Chromium
+        if: matrix.suite == 'e2e'
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run e2e tests
-        run: pnpm test:e2e
+      - name: Run ${{ matrix.suite }} tests
+        run: pnpm test:${{ matrix.suite }}
 
       - name: Upload Playwright report
+        if: matrix.suite == 'e2e' && !cancelled()
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
         with:
           name: playwright-report
           path: playwright-report/
