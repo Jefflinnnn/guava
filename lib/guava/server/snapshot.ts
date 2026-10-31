@@ -9,7 +9,7 @@ import { isWidgetList } from "../widgets";
 // Expense dates are Postgres `date` columns. Prisma reads and writes them as
 // UTC midnight, so convert through UTC to keep the calendar day intact.
 
-export function dateFromDb(d: Date): DateKey {
+function dateFromDb(d: Date): DateKey {
   return d.toISOString().slice(0, 10);
 }
 

@@ -18,7 +18,7 @@ import {
 import type { TestResult } from "@/lib/workspace-validation";
 import { getUserDb } from "@/lib/workspace";
 
-export type PlaidKeysInput = { clientId: string; secret: string; env: string };
+type PlaidKeysInput = { clientId: string; secret: string; env: string };
 
 // Server actions take whatever the client sends; re-check it.
 function keysInput(input: unknown): PlaidKeys | string {

@@ -1,6 +1,6 @@
 // Shared by the auth forms (live validation) and the auth Server Actions.
 
-export const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const NAME_MAX = 40;
 export const EMAIL_MAX = 80;
 export const PASSWORD_MIN = 8;

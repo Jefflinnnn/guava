@@ -237,6 +237,6 @@ export function useExpensesView() {
   };
 }
 
-export type CollapsibleSection = "review" | "reviewed";
+type CollapsibleSection = "review" | "reviewed";
 
 export type ExpensesView = ReturnType<typeof useExpensesView>;
