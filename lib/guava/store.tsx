@@ -51,11 +51,11 @@ type State = Snapshot & {
 };
 
 /** A transaction to save. `id: null` creates a new one. */
-export type TxnDraft = Omit<Txn, "id"> & { id: string | null };
+type TxnDraft = Omit<Txn, "id"> & { id: string | null };
 /** A category to save. `id: null` creates a new one (subs are kept on edit). */
-export type CatDraft = Omit<Cat, "id" | "subs"> & { id: string | null };
+type CatDraft = Omit<Cat, "id" | "subs"> & { id: string | null };
 /** A subcategory to save. `id: null` creates a new one. */
-export type SubDraft = Omit<Sub, "id"> & { id: string | null };
+type SubDraft = Omit<Sub, "id"> & { id: string | null };
 
 type Action =
   | { type: "setMonth"; month: Month }
@@ -341,7 +341,7 @@ function makeActions(dispatch: React.Dispatch<Action>) {
   };
 }
 
-export type GuavaActions = ReturnType<typeof makeActions>;
+type GuavaActions = ReturnType<typeof makeActions>;
 
 type Derived = {
   daily: Map<DateKey, DayTotal>;
@@ -418,7 +418,7 @@ export function GuavaProvider({
 }
 
 /** Full store access: `{ state, actions, derived }`. */
-export function useGuava() {
+function useGuava() {
   const ctx = useContext(GuavaContext);
   if (!ctx) throw new Error("useGuava must be used inside <GuavaProvider>");
   return ctx;

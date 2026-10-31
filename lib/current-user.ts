@@ -18,7 +18,7 @@ export class UnauthorizedError extends Error {
  * The Better Auth session for this request, or null. Cached per request, so
  * the layout, pages and route handlers can all call it without extra queries.
  */
-export const getSession = cache(async () => {
+const getSession = cache(async () => {
   // Read headers first: during `next build` this marks the route dynamic
   // before anything touches the database.
   const requestHeaders = await headers();
@@ -39,17 +39,11 @@ export async function requireUser() {
 
 /**
  * The signed-in user's id. Throws `UnauthorizedError` when there's no session.
- * Every Plaid route calls this; catch it with `unauthorizedResponse`.
+ * For server actions, which turn the error into a result instead of
+ * redirecting.
  */
 export async function getCurrentUserId(): Promise<string> {
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();
   return user.id;
-}
-
-/** A 401 response if `error` is an `UnauthorizedError`, otherwise null. */
-export function unauthorizedResponse(error: unknown): Response | null {
-  return error instanceof UnauthorizedError
-    ? Response.json({ error: "Not signed in" }, { status: 401 })
-    : null;
 }

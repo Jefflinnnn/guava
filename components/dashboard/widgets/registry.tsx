@@ -16,7 +16,7 @@ import { MonthCalendarWidget } from "./month-calendar";
 import { MonthlySpendWidget } from "./monthly-spend-chart";
 import { YearHeatmapWidget } from "./year-heatmap";
 
-export type WidgetDef = {
+type WidgetDef = {
   name: string;
   description: string;
   icon: LucideIcon;

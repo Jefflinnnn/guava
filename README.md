@@ -92,5 +92,5 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 ## Known gaps
 
-- The Plaid webhook (`app/api/plaid/webhook`) logs events but doesn't verify Plaid's signature or act on them yet. Banks sync with **Sync now**.
+- Banks sync only when the user clicks **Sync now**. There are no Plaid webhooks yet.
 - There's no password reset until an email provider is added.

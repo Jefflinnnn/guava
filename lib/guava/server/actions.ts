@@ -58,7 +58,7 @@ function bool(v: unknown): boolean {
 
 // ---- Expenses
 
-export type ExpenseInput = {
+type ExpenseInput = {
   date: DateKey;
   name: string;
   amountCents: number;
@@ -205,7 +205,7 @@ export async function categorizeExpenses(
 
 // ---- Categories
 
-export type CategoryInput = {
+type CategoryInput = {
   name: string;
   color: string;
   locked: boolean;
@@ -284,7 +284,7 @@ export async function deleteCategory(
 
 // ---- Subcategories
 
-export type SubcategoryInput = { name: string };
+type SubcategoryInput = { name: string };
 
 function subcategoryData(input: SubcategoryInput) {
   return { name: text(input?.name, 24, "name") };

@@ -1,4 +1,4 @@
-export type ParseResult<T> =
+type ParseResult<T> =
   { value: T; error?: undefined } | { value?: never; error: string };
 
 export const EXPENSE_CAP_CENTS = 99_999_99;
