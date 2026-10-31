@@ -1,3 +1,4 @@
+---
 name: Commitlint
 
 on:
@@ -13,7 +14,10 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
+
+      - name: Lint commit messages
+        uses: wagoid/commitlint-github-action@v6
