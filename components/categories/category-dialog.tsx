@@ -30,7 +30,7 @@ export const NAME_MAX = 24;
  * - Deleting closes this dialog and opens the "Are you sure?" confirm, which
  *   this component owns — keep it mounted (toggle `open`, don't unmount it).
  */
-export type CategoryDialogProps = {
+type CategoryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categoryId?: string | null;

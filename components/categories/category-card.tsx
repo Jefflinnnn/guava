@@ -15,7 +15,7 @@ import { SubcategoryRow } from "./subcategory-row";
 
 const AMOUNT_CHARS = 8;
 
-export type CategoryCardHandlers = {
+type CategoryCardHandlers = {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;

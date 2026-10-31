@@ -25,7 +25,7 @@ const NOT_SPENDING = new Set([
 ]);
 
 /** Why a transaction wasn't imported. */
-export type SkipReason = "zero" | "too-large";
+type SkipReason = "zero" | "too-large";
 
 export type ImportedExpense = {
   plaidTransactionId: string;

@@ -14,7 +14,7 @@ import {
 } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
-export type AuthFormResult = {
+type AuthFormResult = {
   /** Shown in the red box above the submit button. */
   formError?: string;
   /** Signup only: the email belongs to an existing account. */

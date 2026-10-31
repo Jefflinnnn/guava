@@ -14,20 +14,17 @@ import type { Account, Cat, Filters } from "@/lib/guava/types";
 import { UNCATEGORIZED, UNCATEGORIZED_KEY } from "@/lib/guava/uncategorized";
 
 /** The filterable columns, in header order. */
-export type FilterKey =
+type FilterKey =
   "date" | "name" | "bank" | "account" | "amount" | "cat" | "sub" | "status";
 
-export type ActiveFilter = {
+type ActiveFilter = {
   key: FilterKey;
   label: string;
   /** Patch that clears this filter. */
   clear: Partial<Filters>;
 };
 
-export function labelOf<T extends string>(
-  options: [T, string][],
-  value: T,
-): string {
+function labelOf<T extends string>(options: [T, string][], value: T): string {
   return options.find(([v]) => v === value)?.[1] ?? value;
 }
 

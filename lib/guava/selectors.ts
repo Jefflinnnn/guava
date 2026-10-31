@@ -36,11 +36,11 @@ export function dailyTotals(txns: Txn[]): Map<DateKey, DayTotal> {
   return map;
 }
 
-export function txnsInMonth(txns: Txn[], m: Month): Txn[] {
+function txnsInMonth(txns: Txn[], m: Month): Txn[] {
   return txns.filter((t) => isInMonth(t.date, m));
 }
 
-export function sumCents(txns: Txn[]): number {
+function sumCents(txns: Txn[]): number {
   return txns.reduce((a, t) => a + t.amountCents, 0);
 }
 
@@ -112,7 +112,7 @@ export function uncategorizedStat(txns: Txn[], m: Month): UncategorizedStat {
   return { spent, count: none.length, share: shareOf(spent, total) };
 }
 
-export type MonthTotal = {
+type MonthTotal = {
   month: Month;
   total: number;
   /** the current, unfinished month */ partial: boolean;

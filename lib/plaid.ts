@@ -57,7 +57,7 @@ export function logPlaidError(label: string, error: unknown) {
 }
 
 /** The user's saved Plaid keys, decrypted, or null when there are none. */
-export async function loadPlaidKeys(db: UserDb): Promise<PlaidKeys | null> {
+async function loadPlaidKeys(db: UserDb): Promise<PlaidKeys | null> {
   const row = await db.plaidConfig.findUnique({ where: { id: 1 } });
   if (!row || !isPlaidEnv(row.env)) return null;
   return { clientId: row.clientId, secret: decrypt(row.secret), env: row.env };
