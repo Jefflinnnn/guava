@@ -1,0 +1,11 @@
+name: Idea
+description: Jot something down to triage later
+labels: [idea]
+projects: [jameshuangcoding/3]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+    validations:
+      required: true
