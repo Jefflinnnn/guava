@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  # commitlint reads the pull request's commits.
+  pull-requests: read
 
 # A new push to a branch cancels its older, still-running lint runs.
 concurrency:
@@ -43,3 +45,16 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+  commitlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Full history, so commitlint can read every commit in the pull request.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lint commit messages
+        uses: wagoid/commitlint-github-action@v6
