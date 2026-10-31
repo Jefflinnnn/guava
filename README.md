@@ -70,7 +70,7 @@ Unit tests sit next to the code they cover (`lib/**/*.test.ts`). Integration and
 
 The test databases come from `compose.test.yaml`. Setting `NEON_LOCAL_PROXY` points the app's Neon driver at the local proxy, so the tests exercise the same code as production. `tests/env.ts` builds the test settings at runtime and passes them over `.env`, so tests never touch real databases. The database password is random, created on the first `pnpm test:db:up` in `tests/db/.password` (gitignored).
 
-CI runs the unit, integration and e2e suites in parallel on every pull request and on pushes to `main`.
+CI runs the unit, integration and e2e suites in parallel on every pull request and on pushes to `main`, alongside Prettier, ESLint, typecheck and commitlint.
 
 ## Scripts
 
